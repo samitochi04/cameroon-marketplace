@@ -3,5 +3,19 @@
   "tagline": "La meilleure plateforme multi-vendeurs au Cameroun",
   "login": "Se connecter",
   "signup": "S'inscrire",
-  "search": "Rechercher des produits..."
+  "search": "Rechercher des produits...",
+  "discover_quality_products": "Découvrez des Produits de Qualité",
+  "hero_subtitle": "Trouvez les meilleurs produits des vendeurs locaux",
+  "shop_now": "Acheter Maintenant",
+  "featured_products": "Produits en Vedette",
+  "view_all": "Voir Tout",
+  "error_loading_products": "Erreur lors du chargement des produits",
+  "shop_by_category": "Acheter par Catégorie",
+  "all_categories": "Toutes les Catégories",
+  "top_vendors": "Meilleurs Vendeurs",
+  "all_vendors": "Tous les Vendeurs",
+  "products": "Produits",
+  "special_offers": "Offres Spéciales",
+  "special_offer_title": "Offre à Durée Limitée",
+  "special_offer_description": "Obtenez des offres incroyables sur des produits sélectionnés pour un temps limité."
 }

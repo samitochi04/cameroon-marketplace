@@ -1,35 +1,28 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import AppRouter from './routes';
+import { AuthProvider } from "./context/AuthContext";
+import { CartProvider } from "./context/CartContext";
+import { ToastProvider } from "./components/ui/Toaster";
+import { Suspense, lazy } from 'react';
+
+// Lazy loaded pages
+const ProductListPage = lazy(() => import('./pages/ProductListPage/ProductListPage'));
+const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage/ProductDetailPage'));
+const CartPage = lazy(() => import('./pages/CartPage/CartPage'));
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <AuthProvider>
+      <CartProvider>
+        <ToastProvider>
+          <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
+            <AppRouter />
+          </Suspense>
+          {/* NavigationListener can't be used directly with RouterProvider, 
+              you'd need to adjust it or use a different approach for navigation tracking */}
+        </ToastProvider>
+      </CartProvider>
+    </AuthProvider>
+  );
 }
 
-export default App
+export default App;

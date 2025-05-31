@@ -1,0 +1,1 @@
+export { VendorHeader } from './VendorHeader';

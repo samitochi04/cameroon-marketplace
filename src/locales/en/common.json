@@ -3,5 +3,19 @@
   "tagline": "The best multi-vendor platform in Cameroon",
   "login": "Log In",
   "signup": "Sign Up",
-  "search": "Search products..."
+  "search": "Search products...",
+  "discover_quality_products": "Discover Quality Products",
+  "hero_subtitle": "Find the best products from local vendors",
+  "shop_now": "Shop Now",
+  "featured_products": "Featured Products",
+  "view_all": "View All",
+  "error_loading_products": "Error loading products",
+  "shop_by_category": "Shop by Category",
+  "all_categories": "All Categories",
+  "top_vendors": "Top Vendors",
+  "all_vendors": "All Vendors",
+  "products": "Products",
+  "special_offers": "Special Offers",
+  "special_offer_title": "Limited Time Offer",
+  "special_offer_description": "Get amazing deals on selected products for a limited time."
 }
