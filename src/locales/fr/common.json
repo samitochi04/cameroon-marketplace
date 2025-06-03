@@ -53,7 +53,9 @@
     "search_anyway": "Rechercher quand même"
   },
   "auth": {
+    "hello": "Bonjour",
     "login": "Se connecter",
+    "logout": "Se déconnecter",
     "signup": "S'inscrire",
     "create_account": "Créer un compte",
     "creating_account": "Création du compte...",
@@ -163,6 +165,7 @@
   },
   "vendors": {
     "vendors": "Vendeurs",
+    "vendor_portal": "Portail Vendeur",
     "explore_vendors": "Explorez Nos Vendeurs",
     "explore_description": "Découvrez des produits uniques de vendeurs de confiance à travers le Cameroun",
     "search_vendors": "Rechercher des vendeurs...",
@@ -181,5 +184,20 @@
     "vendor_not_found": "Vendeur non trouvé",
     "vendor_not_found_message": "Le vendeur que vous recherchez n'existe pas ou a été supprimé",
     "browse_vendors": "Parcourir Tous les Vendeurs"
+  },
+  "wishlist": {
+    "your_wishlist": "Votre Liste de Souhaits",
+    "empty_wishlist": "Votre liste de souhaits est vide",
+    "discover_and_save": "Découvrez des produits et ajoutez-les à votre liste de souhaits",
+    "please_login": "Veuillez vous connecter",
+    "login_to_view_wishlist": "Connectez-vous pour voir vos produits enregistrés",
+    "in_stock": "En Stock",
+    "out_of_stock": "Rupture de Stock",
+    "remove_from_wishlist": "Retirer de la liste",
+    "add_to_cart": "Ajouter au Panier",
+    "item_added_to_cart": "Article ajouté au panier",
+    "item_removed": "Article retiré de votre liste",
+    "error_removing": "Erreur lors de la suppression",
+    "wishlist_items": "Articles dans la liste"
   }
 }

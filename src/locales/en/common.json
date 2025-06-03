@@ -53,7 +53,9 @@
     "search_anyway": "Search anyway"
   },
   "auth": {
+    "hello": "Hello",
     "login": "Log In",
+    "logout": "Log Out",
     "signup": "Sign Up",
     "create_account": "Create Account",
     "creating_account": "Creating account...",
@@ -195,5 +197,20 @@
     "vendor_not_found": "Vendor not found",
     "vendor_not_found_message": "The vendor you are looking for does not exist or has been removed",
     "browse_vendors": "Browse All Vendors"
+  },
+  "wishlist": {
+    "your_wishlist": "Your Wishlist",
+    "empty_wishlist": "Your wishlist is empty",
+    "discover_and_save": "Discover products and save them to your wishlist",
+    "please_login": "Please log in",
+    "login_to_view_wishlist": "Log in to view your saved products",
+    "in_stock": "In Stock",
+    "out_of_stock": "Out of Stock",
+    "remove_from_wishlist": "Remove from wishlist",
+    "add_to_cart": "Add to Cart",
+    "item_added_to_cart": "Item added to cart",
+    "item_removed": "Item removed from wishlist",
+    "error_removing": "Error removing item",
+    "wishlist_items": "Wishlist Items"
   }
 }

@@ -152,7 +152,7 @@ export const NavBar = () => {
                     </div>
                     <input
                       type="text"
-                      placeholder={t("search")}
+                      placeholder={t("search.search_placeholder")}
                       className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
@@ -232,30 +232,27 @@ export const NavBar = () => {
                     onClick={toggleUserMenu}
                   >
                     <User size={20} />
-                    <span className="ml-2 hidden md:inline">
-                      {user?.name || "Account"}
-                    </span>
                   </button>
 
                   {userMenuOpen && (
                     <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
                       <div className="py-1">
                         <div className="px-4 py-2 text-sm text-gray-500 border-b border-gray-100">
-                          {t("hello")}, {user?.name || user?.email || "User"}
+                          {t("auth.hello")}, {user?.name || user?.email || "User"}
                         </div>
 
                         <Link
                           to="/account/dashboard"
                           className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
-                          {t("my_account")}
+                          {t("profile.my_profile")}
                         </Link>
 
                         <Link
                           to="/account/orders"
                           className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
-                          {t("my_orders")}
+                          {t("orders.my_orders")}
                         </Link>
 
                         {user.role === "vendor" && (
@@ -263,7 +260,7 @@ export const NavBar = () => {
                             to="/vendor-portal"
                             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                           >
-                            {t("vendor_portal")}
+                            {t("vendors.vendor_portal")}
                           </Link>
                         )}
 
@@ -280,7 +277,7 @@ export const NavBar = () => {
                           onClick={handleLogout}
                           className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                         >
-                          {t("logout")}
+                          {t("auth.logout")}
                         </button>
                       </div>
                     </div>
@@ -293,13 +290,13 @@ export const NavBar = () => {
                     className="text-gray-700 hover:text-primary flex items-center px-3 py-2 text-sm font-medium"
                   >
                     <LogIn size={18} className="sm:mr-1" />
-                    <span className="hidden sm:inline">{t("login")}</span>
+                    <span className="hidden sm:inline">{t("auth.login")}</span>
                   </Link>
                   <Link
                     to="/register"
                     className="bg-primary text-white hover:bg-primary-dark px-3 py-2 rounded-md text-sm font-medium flex items-center"
                   >
-                    <span>{t("signup")}</span>
+                    <span>{t("auth.signup")}</span>
                   </Link>
                 </div>
               )}
@@ -316,7 +313,7 @@ export const NavBar = () => {
               </div>
               <input
                 type="text"
-                placeholder={t("search")}
+                placeholder={t("search.search_placeholder")}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -333,19 +330,19 @@ export const NavBar = () => {
                 to="/products"
                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-50"
               >
-                {t("products")}
+                {t("common.products")}
               </Link>
               <Link
                 to="/categories"
                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-50"
               >
-                {t("categories")}
+                {t("common.categories")}
               </Link>
               <Link
                 to="/vendors"
                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-50"
               >
-                {t("vendors")}
+                {t("vendors.vendors")}
               </Link>
 
               {isAuthenticated ? (
@@ -354,13 +351,13 @@ export const NavBar = () => {
                     to="/account/dashboard"
                     className="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-50"
                   >
-                    {t("my_account")}
+                    {t("profile.my_profile")}
                   </Link>
                   <Link
                     to="/account/orders"
                     className="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-50"
                   >
-                    {t("my_orders")}
+                    {t("orders.my_orders")}
                   </Link>
 
                   {user.role === "vendor" && (
@@ -369,7 +366,7 @@ export const NavBar = () => {
                       className="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-50"
                     >
                       <Store size={16} className="inline mr-2" />
-                      {t("vendor_portal")}
+                      {t("vendors.vendor_portal")}
                     </Link>
                   )}
 
@@ -386,7 +383,7 @@ export const NavBar = () => {
                     onClick={handleLogout}
                     className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-600 hover:bg-gray-50"
                   >
-                    {t("logout")}
+                    {t("auth.logout")}
                   </button>
                 </>
               ) : (
@@ -394,7 +391,7 @@ export const NavBar = () => {
                   to="/login"
                   className="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-50"
                 >
-                  {t("login")}
+                  {t("auth.login")}
                 </Link>
               )}
             </div>

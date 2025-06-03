@@ -53,6 +53,9 @@ import NotFoundPage from '../pages/NotFoundPage';
 // Import VendorsPage
 import VendorsPage from '../pages/VendorsPage/VendorsPage';
 
+// Import WishlistPage
+import WishlistPage from '../pages/WishlistPage';
+
 const router = createBrowserRouter([
   {
     path: '/',
@@ -67,6 +70,7 @@ const router = createBrowserRouter([
       { path: 'vendors', element: <VendorsPage /> }, // Show all vendors
       { path: 'vendor/:id', element: <VendorStorePage /> }, // Show specific vendor
       { path: 'cart', element: <CartPage /> },
+      { path: 'wishlist', element: <WishlistPage /> }, // Add wishlist route
       { path: 'checkout', element: <CheckoutPage /> },
       { path: 'payment/:orderId', element: <PaymentPage /> },
       { path: 'order-confirmation/:orderId', element: <OrderConfirmationPage /> },
