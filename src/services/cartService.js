@@ -42,66 +42,56 @@ export const cartService = {
         .eq("user_id", userId)
         .single();
 
-      if (cartError && cartError.code !== "PGRST116") {
-        // PGRST116 is "no rows returned" error, which is fine if user has no cart yet
-        console.error("Error fetching cart:", cartError);
-        return null;
-      }
-
-      // If no cart exists yet, return null
-      if (!cartData) return null;
-
-      // Get cart items
-      const { data: cartItems, error: itemsError } = await supabase
-        .from("cart_items")
-        .select(`
-          id,
-          product_id,
-          quantity,
-          product:products (
-            id,
-            name,
-            slug,
-            price,
-            sale_price,
-            images,
-            vendor:vendors (
-              id,
-              store_name
-            )
-          )
-        `)
-        .eq("cart_id", cartData.id);
-
-      if (itemsError) {
-        console.error("Error fetching cart items:", itemsError);
-        return null;
-      }
-
-      // Format the cart items
-      const formattedItems = cartItems.map((item) => ({
-        id: item.id,
-        productId: item.product_id,
-        quantity: item.quantity,
-        name: item.product.name,
-        slug: item.product.slug,
-        price: item.product.sale_price || item.product.price,
-        image: item.product.images && item.product.images.length > 0 
-          ? item.product.images[0] 
-          : "/placeholder-product.jpg",
-        vendor: {
-          id: item.product.vendor.id,
-          name: item.product.vendor.store_name
+      if (cartError) {
+        // If error is because cart doesn't exist (not found), we'll create one later
+        if (cartError.code === "PGRST116") {
+          return null;
         }
-      }));
 
-      return {
-        id: cartData.id,
-        items: formattedItems,
-        lastUpdated: cartData.updated_at
-      };
+        // For other errors (like RLS violations), throw to be handled by caller
+        throw new Error(`Error fetching cart: ${cartError.message}`);
+      }
+
+      // If we have a cart, get the items
+      if (cartData) {
+        const { data: cartItems, error: itemsError } = await supabase
+          .from("cart_items")
+          .select(`
+            id,
+            product_id,
+            quantity,
+            products:product_id (
+              id,
+              name,
+              price,
+              sale_price,
+              thumbnail_url
+            )
+          `)
+          .eq("cart_id", cartData.id);
+
+        if (itemsError) {
+          throw new Error(`Error fetching cart items: ${itemsError.message}`);
+        }
+
+        // Format cart items for the UI
+        const formattedItems = cartItems.map((item) => ({
+          id: item.id,
+          productId: item.product_id,
+          quantity: item.quantity,
+          product: item.products
+        }));
+
+        return {
+          id: cartData.id,
+          items: formattedItems
+        };
+      }
+
+      return null;
     } catch (error) {
-      console.error("Error in getCartFromDatabase:", error);
+      console.error("Error fetching cart:", error);
+      // Return null to indicate failure - caller should handle this
       return null;
     }
   },

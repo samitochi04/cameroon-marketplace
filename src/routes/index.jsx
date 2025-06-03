@@ -10,6 +10,8 @@ import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
+import AuthCallbackPage from '../pages/auth/AuthCallbackPage';
+import RegisterTestPage from '../pages/auth/RegisterTestPage';
 
 // Main Pages
 import HomePage from '../pages/HomePage';
@@ -20,6 +22,7 @@ import CartPage from '../pages/CartPage';
 import CheckoutPage from '../pages/CheckoutPage';
 import PaymentPage from '../pages/PaymentPage';
 import OrderConfirmationPage from '../pages/OrderConfirmationPage';
+import { CategoryPage } from '../pages/CategoryPage/CategoryPage';
 
 // Customer Pages
 import CustomerDashboard from '../pages/customer/Dashboard';
@@ -47,6 +50,9 @@ import { SettingsPage as AdminSettings } from '../pages/admin/SettingsPage/Setti
 // Error Pages
 import NotFoundPage from '../pages/NotFoundPage';
 
+// Import VendorsPage
+import VendorsPage from '../pages/VendorsPage/VendorsPage';
+
 const router = createBrowserRouter([
   {
     path: '/',
@@ -55,8 +61,11 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       { path: 'products', element: <ProductListPage /> },
+      { path: 'categories', element: <CategoryPage /> }, // Show all categories
+      { path: 'category/:slug', element: <CategoryPage /> }, // Show specific category
       { path: 'products/:slug', element: <ProductDetailPage /> },
-      { path: 'vendor/:id', element: <VendorStorePage /> },
+      { path: 'vendors', element: <VendorsPage /> }, // Show all vendors
+      { path: 'vendor/:id', element: <VendorStorePage /> }, // Show specific vendor
       { path: 'cart', element: <CartPage /> },
       { path: 'checkout', element: <CheckoutPage /> },
       { path: 'payment/:orderId', element: <PaymentPage /> },
@@ -65,6 +74,8 @@ const router = createBrowserRouter([
       { path: 'register', element: <RegisterPage /> },
       { path: 'forgot-password', element: <ForgotPasswordPage /> },
       { path: 'reset-password', element: <ResetPasswordPage /> },
+      { path: 'auth/callback', element: <AuthCallbackPage /> },
+      { path: 'auth/test', element: <RegisterTestPage /> }, // Add our test page
       
       // Customer routes
       {

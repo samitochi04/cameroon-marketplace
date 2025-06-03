@@ -8,7 +8,7 @@ const MainLayout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Use the actual NavBar component */}
+      {/* NavBar component */}
       <NavBar />
 
       {/* Main content */}
@@ -17,7 +17,7 @@ const MainLayout = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-800 text-white py-8">
+      <footer className="bg-gray-800 text-white py-6">
         <div className="container mx-auto px-4">
           <div className="text-center">
             <p>© 2023 Cameroon Marketplace. All rights reserved.</p>

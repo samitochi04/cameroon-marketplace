@@ -2,9 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
-// Import hooks conditionally to prevent crashes
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { supabase } from '@/lib/supabase';
 
 // Mock data as fallback
 const MOCK_PRODUCTS = [
@@ -41,28 +41,30 @@ export const HomePage = () => {
       try {
         setLoading(true);
         
-        // Try to dynamically import hooks to prevent crashes on initial render
+        // Fetch products from Supabase directly instead of using hooks
         try {
-          const { useProducts } = await import("@/hooks/useProducts");
-          const { useCategories } = await import("@/hooks/useCategories");
+          // Fetch featured products
+          const { data: productsData, error: productsError } = await supabase
+            .from('products')
+            .select('*')
+            .eq('is_featured', true)
+            .limit(8);
+            
+          if (productsError) throw productsError;
           
-          // Use the hooks if they successfully load
-          const productsData = useProducts({ featured: true, limit: 8 });
-          const categoriesData = useCategories();
+          // Fetch categories
+          const { data: categoriesData, error: categoriesError } = await supabase
+            .from('categories')
+            .select('*')
+            .limit(8);
+            
+          if (categoriesError) throw categoriesError;
           
-          if (productsData.products) {
-            setFeaturedProducts(productsData.products);
-          } else {
-            setFeaturedProducts(MOCK_PRODUCTS);
-          }
-          
-          if (categoriesData.categories) {
-            setCategories(categoriesData.categories);
-          } else {
-            setCategories(MOCK_CATEGORIES);
-          }
+          // Use fetched data or fallback to mock data
+          setFeaturedProducts(productsData?.length ? productsData : MOCK_PRODUCTS);
+          setCategories(categoriesData?.length ? categoriesData : MOCK_CATEGORIES);
         } catch (e) {
-          console.error("Failed to load API hooks:", e);
+          console.error("Failed to fetch data:", e);
           // Fall back to mock data
           setFeaturedProducts(MOCK_PRODUCTS);
           setCategories(MOCK_CATEGORIES);
@@ -70,7 +72,6 @@ export const HomePage = () => {
         
         // Always use mock vendors for now
         setTopVendors(MOCK_VENDORS);
-        
         setLoading(false);
       } catch (err) {
         console.error("Error in HomePage data fetching:", err);

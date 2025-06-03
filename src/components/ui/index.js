@@ -5,3 +5,4 @@ export * from "./Select";
 export * from "./Badge";
 export * from "./Avatar";
 export * from "./Alert";
+export * from "./GoogleButton";

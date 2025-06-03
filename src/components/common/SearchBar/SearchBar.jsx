@@ -4,8 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { Search, X, Loader } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useProducts } from "@/hooks/useProducts";
+import { useTranslation } from "react-i18next";
 
 export const SearchBar = ({ placeholder, variant = "default", className = "" }) => {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -101,7 +103,7 @@ export const SearchBar = ({ placeholder, variant = "default", className = "" }) 
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setIsFocused(true)}
-          placeholder={placeholder}
+          placeholder={placeholder || t('search')}
           className="flex-grow py-2 px-4 text-gray-700 focus:outline-none bg-transparent"
         />
         {query && (
@@ -132,7 +134,7 @@ export const SearchBar = ({ placeholder, variant = "default", className = "" }) 
           {isLoading ? (
             <div className="flex items-center justify-center py-6">
               <Loader className="w-5 h-5 text-gray-400 animate-spin" />
-              <span className="ml-2 text-sm text-gray-500">Searching...</span>
+              <span className="ml-2 text-sm text-gray-500">{t('searching')}</span>
             </div>
           ) : suggestions.length > 0 ? (
             <ul>
@@ -165,19 +167,19 @@ export const SearchBar = ({ placeholder, variant = "default", className = "" }) 
                   onClick={handleSubmit}
                   className="w-full text-center px-4 py-2 text-primary text-sm font-medium hover:bg-gray-50"
                 >
-                  See all results for "{query}"
+                  {t('see_all_results')} "{query}"
                 </button>
               </li>
             </ul>
           ) : query.length >= 2 ? (
             <div className="px-4 py-6 text-center">
-              <p className="text-sm text-gray-500">No matches found for "{query}"</p>
+              <p className="text-sm text-gray-500">{t('no_matches_found')} "{query}"</p>
               <button
                 type="button"
                 onClick={handleSubmit}
                 className="mt-2 text-primary text-sm font-medium hover:underline"
               >
-                Search anyway
+                {t('search_anyway')}
               </button>
             </div>
           ) : null}
@@ -194,7 +196,7 @@ SearchBar.propTypes = {
 };
 
 SearchBar.defaultProps = {
-  placeholder: "Search for products...",
+  placeholder: "",
   variant: "default",
   className: "",
 };

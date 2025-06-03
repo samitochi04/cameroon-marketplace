@@ -1,202 +1,185 @@
 import { useState, useCallback } from 'react';
-import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
 
-// Hook for common API functionality
+// Main API hook that provides core functionality
 export const useApi = () => {
-  const { getToken, logout } = useAuth();
-  
-  // Create an axios instance with base configuration
-  const apiClient = axios.create({
-    baseURL: `${import.meta.env.VITE_API_URL}/api/${import.meta.env.VITE_API_VERSION || 'v1'}`,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-  
-  // Add auth token to requests
-  apiClient.interceptors.request.use(async (config) => {
-    const token = await getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  });
-  
-  // Handle response errors
-  apiClient.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-      const originalRequest = error.config;
-      
-      // If 401 error (unauthorized) and not already retrying
-      if (error.response?.status === 401 && !originalRequest._retry) {
-        originalRequest._retry = true;
-        
-        try {
-          // Try to refresh the token
-          const newToken = await refreshToken();
-          
-          if (newToken) {
-            // Update the request with new token
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            return apiClient(originalRequest);
-          }
-        } catch (refreshError) {
-          // If refresh token fails, logout user
-          console.error('Error refreshing token:', refreshError);
-          logout();
-          return Promise.reject(refreshError);
-        }
-      }
-      
-      return Promise.reject(error);
-    }
-  );
-  
-  // Generic request method with error handling
-  const request = useCallback(async (method, endpoint, data = null, options = {}) => {
-    try {
-      const response = await apiClient({
-        method,
-        url: endpoint,
-        data: method !== 'get' ? data : undefined,
-        params: method === 'get' ? data : undefined,
-        ...options,
-      });
-      
-      return {
-        data: response.data,
-        status: response.status,
-        headers: response.headers,
-      };
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || err.message || 'An error occurred';
-      
-      // Handle authentication errors
-      if (err.response?.status === 401) {
-        // You might want to trigger a logout or token refresh here
-      }
-      
-      throw {
-        message: errorMessage,
-        status: err.response?.status,
-        data: err.response?.data,
-      };
-    }
-  }, [getToken, apiClient]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const { user } = useAuth();
 
-  // Hook exports for different HTTP methods
-  const useGet = (endpoint, initialData = null) => {
-    const [data, setData] = useState(initialData);
+  const handleRequest = useCallback(async (method, endpoint, data = null) => {
+    setIsLoading(true);
+    setError(null);
     
-    const fetchData = useCallback(async (params = {}) => {
-      try {
-        const response = await request('get', endpoint, params);
-        setData(response.data);
-        return response;
-      } catch (error) {
-        // Let the error propagate to the caller
-        throw error;
-      }
-    }, [endpoint, request]);
-
-    return {
-      data,
-      fetchData,
-    };
-  };
-
-  const usePost = () => {
-    const post = useCallback(async (endpoint, data = {}, options = {}) => {
-      return await request('post', endpoint, data, options);
-    }, [request]);
-
-    return {
-      post,
-    };
-  };
-
-  const usePut = () => {
-    const put = useCallback(async (endpoint, data = {}, options = {}) => {
-      return await request('put', endpoint, data, options);
-    }, [request]);
-
-    return {
-      put,
-    };
-  };
-
-  const useDelete = () => {
-    const del = useCallback(async (endpoint, options = {}) => {
-      return await request('delete', endpoint, null, options);
-    }, [request]);
-
-    return {
-      delete: del,
-    };
-  };
-
-  // Convenience methods for API calls
-  const get = useCallback((url, config = {}) => {
-    return apiClient.get(url, config);
-  }, [apiClient]);
-  
-  const post = useCallback((url, data = {}, config = {}) => {
-    return apiClient.post(url, data, config);
-  }, [apiClient]);
-  
-  const put = useCallback((url, data = {}, config = {}) => {
-    return apiClient.put(url, data, config);
-  }, [apiClient]);
-  
-  const patch = useCallback((url, data = {}, config = {}) => {
-    return apiClient.patch(url, data, config);
-  }, [apiClient]);
-  
-  const del = useCallback((url, config = {}) => {
-    return apiClient.delete(url, config);
-  }, [apiClient]);
-  
-  // Helper function for token refresh
-  const refreshToken = async () => {
     try {
-      // Implementation depends on your auth provider
-      // This is a placeholder for actual token refresh logic
-      return await getToken(true);
-    } catch (error) {
-      console.error('Failed to refresh token:', error);
-      throw error;
+      // Ensure we have a session
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
+        throw new Error('No active session');
+      }
+      
+      // Make direct Supabase requests instead of using a separate API
+      let result;
+      
+      switch (method) {
+        case 'GET':
+          // Extract table and filters from endpoint
+          const table = endpoint.split('/')[1];
+          result = await supabase.from(table).select('*');
+          break;
+          
+        case 'POST':
+          // Extract table from endpoint
+          const postTable = endpoint.split('/')[1];
+          result = await supabase.from(postTable).insert(data).select();
+          break;
+          
+        case 'PUT':
+          // Extract table and id from endpoint
+          const [putTable, id] = endpoint.split('/').slice(1);
+          result = await supabase.from(putTable).update(data).eq('id', id).select();
+          break;
+          
+        case 'DELETE':
+          // Extract table and id from endpoint
+          const [deleteTable, deleteId] = endpoint.split('/').slice(1);
+          result = await supabase.from(deleteTable).delete().eq('id', deleteId);
+          break;
+          
+        default:
+          throw new Error(`Unsupported method: ${method}`);
+      }
+      
+      if (result.error) throw result.error;
+      
+      return { data: result.data, status: 200 };
+    } catch (err) {
+      console.error(`API ${method} Error:`, err);
+      setError(err.message || 'An unexpected error occurred');
+      throw err;
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, []);
+  
+  // Define convenience methods
+  const get = useCallback((endpoint) => handleRequest('GET', endpoint), [handleRequest]);
+  const post = useCallback((endpoint, data) => handleRequest('POST', endpoint, data), [handleRequest]);
+  const put = useCallback((endpoint, data) => handleRequest('PUT', endpoint, data), [handleRequest]);
+  const del = useCallback((endpoint) => handleRequest('DELETE', endpoint), [handleRequest]);
   
   return {
-    request,
     get,
     post,
     put,
-    patch,
-    del
+    delete: del,
+    isLoading,
+    error,
   };
 };
 
-// Convenience exports for individual HTTP method hooks
-export const useGet = (endpoint, initialData = null) => {
+// Custom hooks that wrap the useApi hook for specific HTTP methods
+export const useGet = (endpoint) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const api = useApi();
-  return api.useGet(endpoint, initialData);
+  
+  const fetchData = useCallback(async (params = {}) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Handle parameters by appending to endpoint or filtering results
+      const finalEndpoint = params 
+        ? `${endpoint}${Object.keys(params).length ? '?' + new URLSearchParams(params).toString() : ''}`
+        : endpoint;
+      
+      const response = await api.get(finalEndpoint);
+      setData(response.data);
+      return response;
+    } catch (err) {
+      setError(err.message || 'Failed to fetch data');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [api, endpoint]);
+  
+  return { data, loading, error, fetchData };
 };
 
-export const usePost = () => {
+export const usePost = (endpoint) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const api = useApi();
-  return api.usePost();
+  
+  const postData = useCallback(async (payload) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await api.post(endpoint, payload);
+      setData(response.data);
+      return response;
+    } catch (err) {
+      setError(err.message || 'Failed to post data');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [api, endpoint]);
+  
+  return { data, loading, error, postData };
 };
 
-export const usePut = () => {
+export const usePut = (endpoint) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const api = useApi();
-  return api.usePut();
+  
+  const putData = useCallback(async (payload) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await api.put(endpoint, payload);
+      setData(response.data);
+      return response;
+    } catch (err) {
+      setError(err.message || 'Failed to update data');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [api, endpoint]);
+  
+  return { data, loading, error, putData };
 };
 
-export const useDelete = () => {
+export const useDelete = (endpoint) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const api = useApi();
-  return api.useDelete();
+  
+  const deleteData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await api.delete(endpoint);
+      return response;
+    } catch (err) {
+      setError(err.message || 'Failed to delete data');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [api, endpoint]);
+  
+  return { loading, error, deleteData };
 };
