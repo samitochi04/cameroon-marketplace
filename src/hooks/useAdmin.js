@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useGet, usePost, usePut, useDelete } from './useApi';
+import { useApi } from './useApi';
 import { useAuth } from '@/context/AuthContext';
 
 export const useAdmin = () => {
@@ -7,10 +7,11 @@ export const useAdmin = () => {
   const [dashboardStats, setDashboardStats] = useState(null);
   
   // API hooks
+  const { get, post, put, delete: deleteMethod } = useApi();
   const { data: statsData, loading: statsLoading, fetchData: fetchStats } = useGet('/api/admin/stats');
-  const { post, loading: createLoading } = usePost();
-  const { put, loading: updateLoading } = usePut();
-  const { delete: deleteResource, loading: deleteLoading } = useDelete();
+  const { loading: createLoading } = usePost();
+  const { loading: updateLoading } = usePut();
+  const { loading: deleteLoading } = useDelete();
 
   // Load dashboard stats when component mounts if user is admin
   useEffect(() => {
@@ -101,13 +102,13 @@ export const useAdmin = () => {
 
   const deleteProduct = useCallback(async (productId) => {
     try {
-      await deleteResource(`/api/admin/products/${productId}`);
+      await deleteMethod(`/api/admin/products/${productId}`);
       return true;
     } catch (error) {
       console.error('Failed to delete product:', error);
       throw error;
     }
-  }, [deleteResource]);
+  }, [deleteMethod]);
 
   // Order management functions
   const getAdminOrders = useCallback(async (filters = {}) => {
@@ -153,13 +154,13 @@ export const useAdmin = () => {
 
   const deleteCategory = useCallback(async (categoryId) => {
     try {
-      await deleteResource(`/api/admin/categories/${categoryId}`);
+      await deleteMethod(`/api/admin/categories/${categoryId}`);
       return true;
     } catch (error) {
       console.error('Failed to delete category:', error);
       throw error;
     }
-  }, [deleteResource]);
+  }, [deleteMethod]);
 
   return {
     dashboardStats,

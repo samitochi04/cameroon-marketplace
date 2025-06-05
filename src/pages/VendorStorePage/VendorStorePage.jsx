@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Star, MapPin, Phone, Mail, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useGet } from "@/hooks/useApi";
+import { useApi } from "@/hooks/useApi";
 import { useProducts } from "@/hooks/useProducts";
 import { Button } from "@/components/ui/Button";
 import { ProductGrid } from "@/components/products/ProductGrid";
@@ -17,6 +17,9 @@ export const VendorStorePage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("newest");
   const [category, setCategory] = useState("");
+  
+  // Fix the import - replace useGet with useApi
+  const { get, loading: apiLoading } = useApi();
   
   // Fetch vendor data
   const {

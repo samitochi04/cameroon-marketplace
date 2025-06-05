@@ -1,109 +1,71 @@
-import { useState, useCallback, useEffect } from 'react';
-import { useGet, usePost } from './useApi';
+import { useState, useEffect } from 'react';
+import { useApi } from './useApi'; // Fix the import - useGet doesn't exist
 
-export const useProducts = (initialFilters = {}) => {
+export function useProducts(options = {}) {
   const [products, setProducts] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [filters, setFilters] = useState(initialFilters);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    pageSize: 20,
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { get } = useApi(); // Use useApi hook instead of useGet
 
-  // Using the useGet hook from our API utilities
-  const { 
-    data, 
-    loading, 
-    error, 
-    fetchData: fetchProducts 
-  } = useGet('/api/products');
+  const {
+    page = 1,
+    pageSize = 12,
+    filters = {},
+    sort = '',
+    category = null,
+    search = '',
+    featured = false,
+  } = options;
 
-  // Load products with current filters and pagination
-  const loadProducts = useCallback(async () => {
-    try {
-      const params = {
-        ...filters,
-        page: pagination.page,
-        pageSize: pagination.pageSize,
-      };
-      
-      const response = await fetchProducts(params);
-      setProducts(response.data.products);
-      setTotalCount(response.data.totalCount);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to load products:', error);
-      return { products: [], totalCount: 0 };
-    }
-  }, [filters, pagination, fetchProducts]);
-
-  // Update filters and reset pagination
-  const updateFilters = useCallback((newFilters) => {
-    setFilters(prevFilters => ({
-      ...prevFilters,
-      ...newFilters,
-    }));
-    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page when filters change
-  }, []);
-
-  // Change page
-  const changePage = useCallback((newPage) => {
-    setPagination(prev => ({ ...prev, page: newPage }));
-  }, []);
-
-  // Change page size
-  const changePageSize = useCallback((newPageSize) => {
-    setPagination(prev => ({ ...prev, pageSize: newPageSize, page: 1 }));
-  }, []);
-
-  // Get a single product by ID
-  const getProductById = useCallback(async (productId) => {
-    try {
-      const { data } = await fetchProducts({ id: productId });
-      return data.products[0] || null;
-    } catch (error) {
-      console.error(`Failed to get product ${productId}:`, error);
-      return null;
-    }
-  }, [fetchProducts]);
-
-  // Search products
-  const searchProducts = useCallback(async (query) => {
-    try {
-      const params = {
-        search: query,
-        page: 1,
-        pageSize: pagination.pageSize,
-      };
-      
-      const response = await fetchProducts(params);
-      return response.data.products;
-    } catch (error) {
-      console.error('Search failed:', error);
-      return [];
-    }
-  }, [fetchProducts, pagination.pageSize]);
-
-  // Effect to load products when filters or pagination change
   useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
+    const fetchProducts = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const apiFilters = { ...filters };
+        if (category) apiFilters.categoryId = category;
+        if (featured) apiFilters.featured = true;
+
+        const query = {
+          filters: apiFilters,
+          page,
+          pageSize,
+          orderBy: sort ? { field: sort.field, direction: sort.direction } : undefined,
+          search
+        };
+
+        // Use the get method from useApi hook
+        const { data, error, count } = await get('/products', query);
+
+        if (error) {
+          throw error;
+        }
+
+        setProducts(data || []);
+        setTotalCount(count || 0);
+      } catch (err) {
+        console.error('Failed to load products:', err);
+        setError(err);
+        setProducts([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [page, pageSize, category, sort, search, featured, filters, get]);
 
   return {
     products,
-    totalCount,
-    loading,
+    isLoading,
     error,
-    filters,
-    pagination,
-    loadProducts,
-    updateFilters,
-    changePage,
-    changePageSize,
-    getProductById,
-    searchProducts,
+    totalCount,
+    page,
+    pageSize,
   };
-};
+}
 
 // Hook for product details
 export const useProductDetail = (productId) => {

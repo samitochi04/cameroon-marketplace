@@ -53,9 +53,17 @@ export function AuthProvider({ children }) {
         
         // If profile exists, combine with auth data
         if (profile) {
+          // Make sure to preserve the role from user_metadata if it exists
+          const userRole = session.user.user_metadata?.role || profile.role || 'customer';
+          
+          console.log("User profile loaded:", profile);
+          console.log("User metadata:", session.user.user_metadata);
+          console.log("Determined role:", userRole);
+          
           setUser({
             ...session.user,
-            ...profile
+            ...profile,
+            role: userRole // Ensure role is set correctly
           });
         } else {
           // If no profile yet, create one and use basic user data for now

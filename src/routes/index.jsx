@@ -33,10 +33,12 @@ import CustomerProfile from '../pages/customer/Profile';
 // Vendor Pages
 import VendorDashboard from '../pages/vendor/Dashboard';
 import VendorProducts from '../pages/vendor/Products';
-import VendorProductForm from '../pages/vendor/ProductForm';
+import { ProductFormPage } from '../pages/vendor/ProductFormPage/ProductFormPage';
 import VendorOrders from '../pages/vendor/Orders';
 import VendorOrderDetail from '../pages/vendor/OrderDetail';
 import VendorProfile from '../pages/vendor/Profile';
+import PaymentSettings from '../pages/vendor/PaymentSettings/PaymentSettings';
+import EarningsPage from '../pages/vendor/EarningsPage/EarningsPage'; // Add new import
 
 // Admin Pages
 import AdminDashboard from '../pages/admin/Dashboard';
@@ -55,6 +57,9 @@ import VendorsPage from '../pages/VendorsPage/VendorsPage';
 
 // Import WishlistPage
 import WishlistPage from '../pages/WishlistPage';
+
+// Import UnauthorizedPage
+import UnauthorizedPage from '../pages/UnauthorizedPage';
 
 const router = createBrowserRouter([
   {
@@ -92,6 +97,9 @@ const router = createBrowserRouter([
           { path: 'profile', element: <CustomerProfile /> },
         ],
       },
+      
+      // Add the unauthorized route
+      { path: 'unauthorized', element: <UnauthorizedPage /> },
     ],
   },
   
@@ -103,11 +111,13 @@ const router = createBrowserRouter([
       { index: true, element: <Navigate to="/vendor-portal/dashboard" replace /> },
       { path: 'dashboard', element: <VendorDashboard /> },
       { path: 'products', element: <VendorProducts /> },
-      { path: 'products/new', element: <VendorProductForm /> },
-      { path: 'products/edit/:id', element: <VendorProductForm /> },
+      { path: 'products/new', element: <ProductFormPage /> },
+      { path: 'products/edit/:id', element: <ProductFormPage /> },
       { path: 'orders', element: <VendorOrders /> },
       { path: 'orders/:orderId', element: <VendorOrderDetail /> },
       { path: 'profile', element: <VendorProfile /> },
+      { path: 'payment-settings', element: <PaymentSettings /> },
+      { path: 'earnings', element: <EarningsPage /> }, // Add new route
     ],
   },
   

@@ -1,22 +1,37 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useGet } from './useApi';
+import { useApi } from './useApi';
+import { supabase } from '@/lib/supabase';
 
 export const useCategories = () => {
   const [categories, setCategories] = useState([]);
   const [hierarchicalCategories, setHierarchicalCategories] = useState([]);
-  const { data, loading, error, fetchData: fetchCategories } = useGet('/api/categories');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Load all categories
+  // Load all categories directly from Supabase
   const loadCategories = useCallback(async () => {
     try {
-      const response = await fetchCategories();
-      setCategories(response.data.categories || []);
-      return response.data.categories;
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        throw error;
+      }
+      
+      setCategories(data || []);
+      setLoading(false);
+      return data;
     } catch (error) {
       console.error('Failed to load categories:', error);
+      setError(error.message);
+      setLoading(false);
       return [];
     }
-  }, [fetchCategories]);
+  }, []);
 
   // Get category by ID
   const getCategoryById = useCallback((categoryId) => {
@@ -25,17 +40,17 @@ export const useCategories = () => {
 
   // Get subcategories of a category
   const getSubcategories = useCallback((parentId) => {
-    return categories.filter(category => category.parentId === parentId);
+    return categories.filter(category => category.parent_id === parentId);
   }, [categories]);
 
   // Transform flat category list to hierarchical structure
   const buildHierarchicalCategories = useCallback(() => {
     // First, find all top-level categories (no parent)
-    const topLevel = categories.filter(cat => !cat.parentId);
+    const topLevel = categories.filter(cat => !cat.parent_id);
     
     // Recursive function to add children
     const addChildren = (category) => {
-      const children = categories.filter(c => c.parentId === category.id);
+      const children = categories.filter(c => c.parent_id === category.id);
       return {
         ...category,
         children: children.length > 0 ? children.map(addChildren) : [],
@@ -59,7 +74,7 @@ export const useCategories = () => {
       if (!category) break;
       
       path.unshift(category);
-      currentId = category.parentId;
+      currentId = category.parent_id;
     }
     
     return path;

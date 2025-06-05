@@ -2,6 +2,7 @@ import React from "react";
 import { Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { NavBar } from "@/components/common/NavBar/NavBar";
+import { AuthDebug } from "@/components/debug/AuthDebug";
 
 const MainLayout = () => {
   const { t } = useTranslation();
@@ -24,6 +25,9 @@ const MainLayout = () => {
           </div>
         </div>
       </footer>
+
+      {/* Add the debug component */}
+      <AuthDebug />
     </div>
   );
 };

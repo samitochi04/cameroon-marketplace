@@ -13,21 +13,24 @@ export const RoleBasedRoute = ({ children, roles }) => {
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
-    return <Navigate to="/auth/login" state={{ from: location }} replace />;
+    console.log("Not authenticated, redirecting to login");
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // Check if user role is allowed
   const hasRequiredRole = roles.includes(user?.role);
 
+  console.log("Role check details:", {
+    userRole: user?.role || "no role",
+    requiredRoles: roles,
+    hasRequiredRole,
+    path: location.pathname,
+  });
+
   if (!hasRequiredRole) {
-    // Redirect to unauthorized page or dashboard based on user's role
-    if (user?.role === "admin") {
-      return <Navigate to="/admin" replace />;
-    } else if (user?.role === "vendor") {
-      return <Navigate to="/vendor" replace />;
-    } else {
-      return <Navigate to="/" replace />;
-    }
+    // Redirect to unauthorized page
+    console.log("User does not have required role, redirecting to unauthorized");
+    return <Navigate to="/unauthorized" replace />;
   }
 
   // If authenticated and has required role, render the children
