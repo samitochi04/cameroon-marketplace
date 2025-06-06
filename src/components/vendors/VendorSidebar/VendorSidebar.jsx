@@ -10,7 +10,8 @@ import {
   LogOut,
   ChevronRight,
   Menu,
-  X
+  X,
+  DollarSign
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -26,38 +27,43 @@ export const VendorSidebar = () => {
     {
       title: "Dashboard",
       icon: <LayoutDashboard className="w-5 h-5" />,
-      path: "/vendor/dashboard",
+      path: "/vendor-portal/dashboard",
     },
     {
       title: "Products",
       icon: <Package className="w-5 h-5" />,
-      path: "/vendor/products",
+      path: "/vendor-portal/products",
     },
     {
       title: "Orders",
       icon: <ShoppingBag className="w-5 h-5" />,
-      path: "/vendor/orders",
+      path: "/vendor-portal/orders",
     },
     {
       title: "Analytics",
       icon: <BarChart2 className="w-5 h-5" />,
-      path: "/vendor/analytics",
+      path: "/vendor-portal/analytics",
+    },
+    {
+      title: "Earnings",
+      icon: <DollarSign className="w-5 h-5" />,
+      path: "/vendor-portal/earnings",
     },
     {
       title: "Settings",
       icon: <Settings className="w-5 h-5" />,
-      path: "/vendor/settings",
+      path: "/vendor-portal/settings",
     },
     {
       title: "Help",
       icon: <HelpCircle className="w-5 h-5" />,
-      path: "/vendor/help",
+      path: "/vendor-portal/help",
     },
   ];
 
   // Check if a path is active
   const isActivePath = (path) => location.pathname === path || 
-    (path !== '/vendor/dashboard' && location.pathname.startsWith(path));
+    (path !== '/vendor-portal/dashboard' && location.pathname.startsWith(path));
 
   // Sidebar link component
   const NavLink = ({ item }) => (

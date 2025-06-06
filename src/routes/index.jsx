@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate, RouterProvider, Routes, Route } from 'react-router-dom';
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 
 // Layouts - Import as named exports
 import MainLayout from '../layouts/MainLayout';
@@ -37,8 +37,8 @@ import { ProductFormPage } from '../pages/vendor/ProductFormPage/ProductFormPage
 import VendorOrders from '../pages/vendor/Orders';
 import VendorOrderDetail from '../pages/vendor/OrderDetail';
 import VendorProfile from '../pages/vendor/Profile';
-import PaymentSettings from '../pages/vendor/PaymentSettings/PaymentSettings';
-import EarningsPage from '../pages/vendor/EarningsPage/EarningsPage'; // Add new import
+import { SettingsPage } from '../pages/vendor/SettingsPage/SettingsPage';
+import EarningsPage from '../pages/vendor/EarningsPage/EarningsPage';
 
 // Admin Pages
 import AdminDashboard from '../pages/admin/Dashboard';
@@ -116,8 +116,8 @@ const router = createBrowserRouter([
       { path: 'orders', element: <VendorOrders /> },
       { path: 'orders/:orderId', element: <VendorOrderDetail /> },
       { path: 'profile', element: <VendorProfile /> },
-      { path: 'payment-settings', element: <PaymentSettings /> },
-      { path: 'earnings', element: <EarningsPage /> }, // Add new route
+      { path: 'settings', element: <SettingsPage /> },
+      { path: 'earnings', element: <EarningsPage /> },
     ],
   },
   

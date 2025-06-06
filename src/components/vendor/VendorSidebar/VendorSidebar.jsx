@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
+
 export const VendorSidebar = () => {
   const { t } = useTranslation();
   const location = useLocation();

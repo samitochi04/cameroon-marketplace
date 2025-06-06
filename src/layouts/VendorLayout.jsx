@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Outlet, Navigate, useLocation } from "react-router-dom";
-import { VendorSidebar } from "@/components/vendor/VendorSidebar";
+import { VendorSidebar } from "@/components/vendor/VendorSidebar/VendorSidebar";
 import { useAuth } from "@/context/AuthContext";
 import { AuthDebug } from "@/components/debug/AuthDebug";
 

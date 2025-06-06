@@ -60,11 +60,46 @@ exports.updateVendorProfile = async (req, res) => {
   try {
     const vendorId = req.user.id;
     
+    // Process mobile money accounts
+    const mobileMoneyAccounts = {};
+    
+    if (req.body.paymentMethods?.includes('mtn_mobile_money') && 
+        req.body.mtnMobileMoneyPhone && 
+        req.body.mtnAccountName) {
+      mobileMoneyAccounts.mtn = {
+        phone: req.body.mtnMobileMoneyPhone,
+        name: req.body.mtnAccountName
+      };
+    }
+    
+    if (req.body.paymentMethods?.includes('orange_money') && 
+        req.body.orangeMoneyPhone && 
+        req.body.orangeAccountName) {
+      mobileMoneyAccounts.orange = {
+        phone: req.body.orangeMoneyPhone,
+        name: req.body.orangeAccountName
+      };
+    }
+    
     const vendor = await vendorService.updateVendor(vendorId, {
       storeName: req.body.storeName,
       description: req.body.description,
       logoUrl: req.body.logoUrl,
       bannerUrl: req.body.bannerUrl,
+      phone: req.body.phone,
+      email: req.body.email,
+      address: req.body.address,
+      city: req.body.city,
+      country: req.body.country,
+      website: req.body.website,
+      // Payment settings
+      bankName: req.body.bankName,
+      accountNumber: req.body.accountNumber,
+      accountHolderName: req.body.accountHolderName,
+      paymentMethods: req.body.paymentMethods || [],
+      payoutThreshold: req.body.payoutThreshold,
+      payoutFrequency: req.body.payoutFrequency,
+      mobileMoneyAccounts
     });
 
     return res.status(200).json({

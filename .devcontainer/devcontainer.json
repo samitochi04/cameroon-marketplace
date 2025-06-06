@@ -1,0 +1,13 @@
+{
+  "name": "Cameroon Marketplace Dev",
+  "image": "node:18",
+  "features": {},
+  "postCreateCommand": "npm install",
+  "customizations": {
+    "vscode": {
+      "extensions": ["dbaeumer.vscode-eslint"]
+    }
+  },
+  "forwardPorts": [5173], // Vite default
+  "remoteUser": "node"
+}

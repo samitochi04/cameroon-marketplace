@@ -7,6 +7,8 @@ import { BarChart, DollarSign, Package, ShoppingBag, PlusCircle, AlertTriangle }
 import { supabase } from '@/lib/supabase';
 import VendorEarnings from './VendorEarnings/VendorEarnings';
 
+//  Not used
+
 // Mock data for dashboard when API endpoints don't exist
 const MOCK_DASHBOARD_DATA = {
   summary: {

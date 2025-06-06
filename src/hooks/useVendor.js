@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
+import { ApiClient } from '@/utils/apiClient';
 
 export const useVendor = () => {
-  const { user } = useAuth();
+  const { user, getToken } = useAuth();
   const [vendorProfile, setVendorProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -12,29 +13,27 @@ export const useVendor = () => {
 
   // Fetch vendor profile
   const fetchVendorProfile = useCallback(async () => {
-    if (!user?.id) return;
-
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
+      const token = await getToken();
       
-      const { data, error } = await supabase
-        .from('vendors')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-        
-      if (error) throw error;
+      const response = await ApiClient.get('/vendors/profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
-      setVendorProfile(data);
-      return data;
+      setVendorProfile(response.data.data);
     } catch (err) {
       console.error('Error fetching vendor profile:', err);
-      setError(err.message);
-      return null;
+      setError(err);
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user, getToken]);
 
   // Get vendor products
   const getVendorProducts = useCallback(async (filters = {}) => {
@@ -207,12 +206,51 @@ export const useVendor = () => {
     }
   }, [user?.id]);
 
+  // Update vendor profile
+  const updateProfile = useCallback(async (data) => {
+    try {
+      setUpdateLoading(true);
+      const token = await getToken();
+      
+      // Process payment methods data for API
+      const paymentData = {
+        ...data,
+        mobileMoneyAccounts: {}
+      };
+      
+      // Add mobile money data if appropriate methods are selected
+      if (data.paymentMethods.includes('mtn_mobile_money')) {
+        paymentData.mobileMoneyAccounts.mtn = {
+          phone: data.mtnMobileMoneyPhone,
+          name: data.mtnAccountName
+        };
+      }
+      
+      if (data.paymentMethods.includes('orange_money')) {
+        paymentData.mobileMoneyAccounts.orange = {
+          phone: data.orangeMoneyPhone,
+          name: data.orangeAccountName
+        };
+      }
+      
+      const response = await ApiClient.put('/vendors/profile', paymentData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setVendorProfile(response.data.data);
+      return response.data;
+    } catch (err) {
+      console.error('Error updating vendor profile:', err);
+      throw err;
+    } finally {
+      setUpdateLoading(false);
+    }
+  }, [getToken]);
+
   // Initialize - load vendor profile on component mount
   useEffect(() => {
-    if (user?.id) {
-      fetchVendorProfile();
-    }
-  }, [user?.id, fetchVendorProfile]);
+    fetchVendorProfile();
+  }, [fetchVendorProfile]);
 
   return {
     vendorProfile,
@@ -225,6 +263,7 @@ export const useVendor = () => {
     getProductById,
     addProduct,
     updateProduct,
-    deleteProduct
+    deleteProduct,
+    updateProfile
   };
 };
