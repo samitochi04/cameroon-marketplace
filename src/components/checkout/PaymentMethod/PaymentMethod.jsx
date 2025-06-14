@@ -1,24 +1,48 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CreditCard, DollarSign } from 'lucide-react';
+import { CreditCard, SmartphoneNfc, Smartphone } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 
 export const PaymentMethod = ({ selectedMethod, onSelectMethod, total }) => {
   const { t } = useTranslation();
   
-  // Payment method options
+  // Add state for payment information
+  const [paymentInfo, setPaymentInfo] = useState({
+    mobileNumber: '',
+    cardNumber: '',
+    expiryDate: '',
+    cvv: '',
+    cardholderName: '',
+  });
+  
+  // Handle payment info changes
+  const handlePaymentInfoChange = (e) => {
+    const { name, value } = e.target;
+    setPaymentInfo(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  // Payment method options (removed COD)
   const paymentOptions = [
     { 
-      id: 'kora', 
-      name: 'Kora Pay', 
-      description: t('kora_payment_description'),
-      icon: CreditCard
+      id: 'mtn_mobile_money', 
+      name: 'MTN Mobile Money', 
+      description: t('mtn_mobile_money_description', 'Pay securely using MTN Mobile Money'),
+      icon: SmartphoneNfc
     },
     { 
-      id: 'cod', 
-      name: t('cash_on_delivery'), 
-      description: t('cod_payment_description'),
-      icon: DollarSign
+      id: 'orange_money', 
+      name: 'Orange Money', 
+      description: t('orange_money_description', 'Pay securely using Orange Money'),
+      icon: Smartphone
+    },
+    { 
+      id: 'credit_card', 
+      name: t('credit_card', 'Credit/Debit Card'), 
+      description: t('credit_card_description', 'Pay securely with your credit or debit card'),
+      icon: CreditCard
     }
   ];
   
@@ -27,7 +51,7 @@ export const PaymentMethod = ({ selectedMethod, onSelectMethod, total }) => {
     return new Intl.NumberFormat('fr-CM', {
       style: 'currency',
       currency: 'XAF',
-      maximumFractionDigits: 0
+      minimumFractionDigits: 0
     }).format(amount);
   };
 
@@ -77,42 +101,129 @@ export const PaymentMethod = ({ selectedMethod, onSelectMethod, total }) => {
                   </div>
                 </div>
               </div>
+              
+              {/* Show payment form fields when this method is selected */}
+              {selectedMethod === option.id && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  {(option.id === 'mtn_mobile_money' || option.id === 'orange_money') && (
+                    <div className="space-y-3">
+                      <p className="text-sm text-gray-600 mb-2">
+                        {option.id === 'mtn_mobile_money' 
+                          ? t('enter_mtn_number', 'Enter your MTN Mobile Money number')
+                          : t('enter_orange_number', 'Enter your Orange Money number')}
+                      </p>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {t('mobile_number')} <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          type="tel"
+                          name="mobileNumber"
+                          placeholder="e.g., 6XXXXXXXX"
+                          value={paymentInfo.mobileNumber}
+                          onChange={handlePaymentInfoChange}
+                          className="w-full"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          {t('mobile_number_hint', 'Enter your phone number without the country code')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {option.id === 'credit_card' && (
+                    <div className="space-y-3">
+                      <p className="text-sm text-gray-600 mb-2">
+                        {t('enter_card_details', 'Enter your card details')}
+                      </p>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {t('card_number')} <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          type="text"
+                          name="cardNumber"
+                          placeholder="XXXX XXXX XXXX XXXX"
+                          value={paymentInfo.cardNumber}
+                          onChange={handlePaymentInfoChange}
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            {t('expiry_date')} <span className="text-red-500">*</span>
+                          </label>
+                          <Input
+                            type="text"
+                            name="expiryDate"
+                            placeholder="MM/YY"
+                            value={paymentInfo.expiryDate}
+                            onChange={handlePaymentInfoChange}
+                            className="w-full"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            {t('cvv')} <span className="text-red-500">*</span>
+                          </label>
+                          <Input
+                            type="text"
+                            name="cvv"
+                            placeholder="XXX"
+                            value={paymentInfo.cvv}
+                            onChange={handlePaymentInfoChange}
+                            className="w-full"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {t('cardholder_name')} <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          type="text"
+                          name="cardholderName"
+                          placeholder="NAME ON CARD"
+                          value={paymentInfo.cardholderName}
+                          onChange={handlePaymentInfoChange}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
       </div>
       
-      {/* Kora Pay Fields */}
-      {selectedMethod === 'kora' && (
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h3 className="font-medium mb-4">{t('payment_details')}</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            {t('kora_pay_instructions')}
-          </p>
-          
-          <div className="mt-4 font-medium">
-            {t('amount_to_pay')}: {formatCurrency(total)}
-          </div>
+      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+        <h3 className="font-medium mb-2">{t('payment_summary', 'Payment Summary')}</h3>
+        <div className="flex justify-between text-sm mb-2">
+          <span>{t('total_amount')}</span>
+          <span className="font-semibold">{formatCurrency(total)}</span>
         </div>
-      )}
-      
-      {/* Cash on Delivery Fields */}
-      {selectedMethod === 'cod' && (
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h3 className="font-medium mb-4">{t('cash_on_delivery')}</h3>
-          <p className="text-sm text-gray-600">
-            {t('cod_instructions')}
-          </p>
-          
-          <div className="mt-4 font-medium">
-            {t('amount_to_pay_on_delivery')}: {formatCurrency(total)}
-          </div>
+        <div className="flex justify-between text-sm">
+          <span>{t('payment_method')}</span>
+          <span className="font-semibold">
+            {selectedMethod === 'mtn_mobile_money' && 'MTN Mobile Money'}
+            {selectedMethod === 'orange_money' && 'Orange Money'}
+            {selectedMethod === 'credit_card' && t('credit_card')}
+          </span>
         </div>
-      )}
+        <p className="text-xs text-gray-500 mt-2">
+          {t('payment_confirmation_note', 'You will confirm this payment after placing your order')}
+        </p>
+      </div>
       
       <div className="mt-6 p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
         <p className="text-sm text-yellow-800">
-          {t('payment_security_note')}
+          {t('payment_security_note', 'Your payment information is encrypted and secure. We never store your payment details.')}
         </p>
       </div>
     </div>

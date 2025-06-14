@@ -4,6 +4,7 @@ import { CartProvider } from "./context/CartContext";
 import { ToastProvider } from "./components/ui/Toaster";
 import { Suspense, lazy, useEffect } from 'react';
 import { ensureStorageBuckets } from './utils/storageHelpers';
+import { ToastContainer } from './components/ui/Toast/ToastContainer';
 
 // Lazy loaded pages
 const ProductListPage = lazy(() => import('./pages/ProductListPage/ProductListPage'));
@@ -31,6 +32,7 @@ function App() {
         <ToastProvider>
           <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
             <AppRouter />
+            <ToastContainer />
           </Suspense>
         </ToastProvider>
       </CartProvider>

@@ -1,27 +1,30 @@
 import React from 'react';
 import { Truck, Package } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export const ShippingMethod = ({ selectedMethod, onSelectMethod }) => {
+  const { t } = useTranslation();
+
   const shippingMethods = [
     {
       id: 'standard',
-      name: 'Standard Shipping',
+      name: t('checkout.standard_shipping'),
       price: 2000,
-      description: '3-5 business days',
+      description: t('checkout.standard_shipping_description'),
       icon: <Truck className="h-5 w-5" />
     },
     {
       id: 'express',
-      name: 'Express Shipping',
+      name: t('checkout.express_shipping'),
       price: 5000,
-      description: '1-2 business days',
-      icon: <Package className="h-5 w-5" /> 
+      description: t('checkout.express_shipping_description'),
+      icon: <Package className="h-5 w-5" />
     }
   ];
 
   return (
     <div className="mb-6">
-      <h2 className="text-lg font-semibold mb-3">Shipping Method</h2>
+      <h2 className="text-lg font-semibold mb-3">{t('checkout.shipping_method')}</h2>
       <div className="space-y-3">
         {shippingMethods.map((method) => (
           <div

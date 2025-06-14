@@ -10,10 +10,11 @@ import { useAuth } from "@/context/AuthContext";
 export const CinetpayCheckout = ({ 
   amount, 
   orderId, 
-  vendorId, 
+  vendor_id, 
   onSuccess, 
   onError, 
-  selectedPaymentMethod 
+  selectedPaymentMethod ,
+  paymentInfo
 }) => {
   const { t } = useTranslation();
   const { user, getToken } = useAuth();
@@ -25,6 +26,12 @@ export const CinetpayCheckout = ({
   const initiatePayment = async () => {
     setLoading(true);
     setError(null);
+
+    const rawPhone = paymentInfo?.mobileNumber || user.phone || '';
+    const cleanedPhone = rawPhone.replace(/\D/g, '');
+    const finalPhone = cleanedPhone.startsWith('237') 
+      ? `+${cleanedPhone}` 
+      : `+237${cleanedPhone}`;
     
     try {
       const token = await getToken();
@@ -34,7 +41,7 @@ export const CinetpayCheckout = ({
           id: user.id,
           name: user.displayName || user.email,
           email: user.email,
-          phone: user.phone || '',
+          phone: finalPhone,
           address: user.address || '',
           city: user.city || '',
           country: 'CM',
@@ -44,7 +51,7 @@ export const CinetpayCheckout = ({
           order_id: orderId,
           payment_method: selectedPaymentMethod
         },
-        vendorId
+        vendor_id
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });

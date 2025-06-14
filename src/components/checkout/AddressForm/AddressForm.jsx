@@ -1,26 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/context/AuthContext';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
 import { Switch } from '@/components/ui/Switch';
-
-// List of regions in Cameroon
-const REGIONS = [
-  'Adamaoua',
-  'Centre',
-  'East',
-  'Far North',
-  'Littoral',
-  'North',
-  'Northwest',
-  'South',
-  'Southwest',
-  'West'
-];
 
 export const AddressForm = () => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [sameAsShipping, setSameAsShipping] = useState(true);
   
   const { 
@@ -29,15 +16,25 @@ export const AddressForm = () => {
     formState: { errors }, 
     watch, 
     setValue,
+    getValues,
   } = useFormContext();
   
-  // Toggle same as shipping
+  const shippingAddress = watch('shippingAddress');
+  
+  useEffect(() => {
+    if (sameAsShipping) {
+      const shippingValues = getValues('shippingAddress');
+      Object.keys(shippingValues).forEach(field => {
+        setValue(`billingAddress.${field}`, shippingValues[field]);
+      });
+    }
+  }, [shippingAddress, sameAsShipping, setValue, getValues]);
+  
   const handleSameAsShippingChange = (checked) => {
     setSameAsShipping(checked);
     setValue('billingAddress.sameAsShipping', checked);
     
     if (checked) {
-      // Copy shipping address values to billing address
       const shippingValues = watch('shippingAddress');
       Object.keys(shippingValues).forEach(field => {
         setValue(`billingAddress.${field}`, shippingValues[field]);
@@ -49,7 +46,7 @@ export const AddressForm = () => {
     <div className="space-y-8">
       {/* Shipping Address */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">{t('shipping_address')}</h2>
+        <h2 className="text-xl font-semibold mb-4">{t('checkout.shipping_address')}</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="col-span-2">
@@ -106,23 +103,13 @@ export const AddressForm = () => {
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('region')} <span className="text-red-500">*</span>
+              {t('checkout.more_info')} <span className="text-red-500">*</span>
             </label>
-            <Controller
-              name="shippingAddress.region"
-              control={control}
-              rules={{ required: t('region_required') }}
-              render={({ field }) => (
-                <Select
-                  {...field}
-                  error={errors.shippingAddress?.region?.message}
-                >
-                  <option value="">{t('select_region')}</option>
-                  {REGIONS.map(region => (
-                    <option key={region} value={region}>{region}</option>
-                  ))}
-                </Select>
-              )}
+            <Input
+              {...register('shippingAddress.region', {
+                required: t('region_required')
+              })}
+              error={errors.shippingAddress?.region?.message}
             />
           </div>
         </div>
@@ -131,11 +118,11 @@ export const AddressForm = () => {
       {/* Billing Address */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">{t('billing_address')}</h2>
+          <h2 className="text-xl font-semibold">{t('checkout.billing_address')}</h2>
           
           <div className="flex items-center">
             <label htmlFor="same-as-shipping" className="mr-2 text-sm">
-              {t('same_as_shipping')}
+              {t('checkout.same_as_shipping')}
             </label>
             <Controller
               name="billingAddress.sameAsShipping"
@@ -154,7 +141,6 @@ export const AddressForm = () => {
           </div>
         </div>
         
-        {/* Show billing address fields only if not same as shipping */}
         {!sameAsShipping && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="col-span-2">
@@ -213,21 +199,11 @@ export const AddressForm = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {t('region')} <span className="text-red-500">*</span>
               </label>
-              <Controller
-                name="billingAddress.region"
-                control={control}
-                rules={{ required: !sameAsShipping ? t('region_required') : false }}
-                render={({ field }) => (
-                  <Select
-                    {...field}
-                    error={errors.billingAddress?.region?.message}
-                  >
-                    <option value="">{t('select_region')}</option>
-                    {REGIONS.map(region => (
-                      <option key={region} value={region}>{region}</option>
-                    ))}
-                  </Select>
-                )}
+              <Input
+                {...register('billingAddress.region', {
+                  required: !sameAsShipping ? t('region_required') : false
+                })}
+                error={errors.billingAddress?.region?.message}
               />
             </div>
           </div>

@@ -1,13 +1,23 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "./AuthContext";
+import { useUI } from "./UIContext";
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
   const { isAuthenticated, user } = useAuth();
+  const { addToast } = useUI();
   const [cartItems, setCartItems] = useState([]);
   const [isCartLoaded, setIsCartLoaded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [appliedPromo, setAppliedPromo] = useState(null);
+  const [shipping, setShipping] = useState(2000); // Default shipping cost
   const syncAttempted = useRef(false);
+
+  // Calculate cart items count
+  const cartItemsCount = useMemo(() => {
+    return cartItems.reduce((total, item) => total + item.quantity, 0);
+  }, [cartItems]);
 
   // Sync cart with backend when authentication state changes
   useEffect(() => {
@@ -54,34 +64,78 @@ export const CartProvider = ({ children }) => {
     }
   }, [cartItems, isCartLoaded]);
 
-  // Add item to cart
+  // Add item to cart with proper checking
   const addToCart = (product, quantity = 1) => {
-    if (!product) return;
+    if (!product || !product.id) {
+      console.error("Invalid product passed to addToCart", product);
+      return;
+    }
+
+    // Make sure we have all the required fields
+    const cartProduct = {
+      id: product.id,
+      vendor_id: product.vendor_id, // <-- Ensure this is set!
+      name: product.name || "Unknown Product",
+      price: parseFloat(product.price) || 0,
+      image: product.image || "/product-placeholder.jpg",
+      quantity: quantity,
+      stock_quantity: product.stock_quantity || 10
+    };
     
     setCartItems(prevItems => {
-      const existingItemIndex = prevItems.findIndex(item => item.productId === product.id);
+      const existingItemIndex = prevItems.findIndex(item => item.id === product.id);
       
       if (existingItemIndex >= 0) {
         // Update quantity of existing item
         const updatedItems = [...prevItems];
-        updatedItems[existingItemIndex].quantity += quantity;
+        const newQuantity = updatedItems[existingItemIndex].quantity + quantity;
+        
+        // Check if we're exceeding stock
+        if (product.stock_quantity && newQuantity > product.stock_quantity) {
+          addToast({
+            title: "Maximum stock reached",
+            message: `Only ${product.stock_quantity} items available`,
+            type: "warning"
+          });
+          updatedItems[existingItemIndex].quantity = product.stock_quantity;
+        } else {
+          updatedItems[existingItemIndex].quantity = newQuantity;
+        }
+        
+        // Show success toast
+        addToast({
+          title: "Cart updated",
+          message: `${product.name} quantity updated in cart`,
+          type: "success"
+        });
+        
         return updatedItems;
       } else {
         // Add new item
-        return [...prevItems, {
-          productId: product.id,
-          name: product.name,
-          price: product.sale_price || product.price,
-          image: product.image_url || product.thumbnail_url,
-          quantity
-        }];
+        addToast({
+          title: "Added to cart",
+          message: `${product.name} added to your cart`,
+          type: "success"
+        });
+        
+        return [...prevItems, cartProduct];
       }
     });
   };
 
   // Remove item from cart
   const removeFromCart = (productId) => {
-    setCartItems(prevItems => prevItems.filter(item => item.productId !== productId));
+    setCartItems(prevItems => {
+      const itemToRemove = prevItems.find(item => item.id === productId);
+      if (itemToRemove) {
+        addToast({
+          title: "Item removed",
+          message: `${itemToRemove.name} removed from cart`,
+          type: "info"
+        });
+      }
+      return prevItems.filter(item => item.id !== productId);
+    });
   };
 
   // Update item quantity
@@ -93,7 +147,7 @@ export const CartProvider = ({ children }) => {
     
     setCartItems(prevItems => 
       prevItems.map(item => 
-        item.productId === productId ? { ...item, quantity } : item
+        item.id === productId ? { ...item, quantity } : item
       )
     );
   };
@@ -101,28 +155,52 @@ export const CartProvider = ({ children }) => {
   // Clear cart
   const clearCart = () => {
     setCartItems([]);
+    addToast({
+      title: "Cart cleared",
+      message: "All items removed from your cart",
+      type: "info"
+    });
   };
 
-  // Calculate cart totals - ensure cartItems is an array before using reduce
-  const cartItemsCount = Array.isArray(cartItems) 
-    ? cartItems.reduce((count, item) => count + (item.quantity || 0), 0)
-    : 0;
-    
-  const cartTotal = Array.isArray(cartItems)
-    ? cartItems.reduce((total, item) => total + ((item.price || 0) * (item.quantity || 0)), 0)
-    : 0;
+  // Calculate subtotal
+  const subtotal = useMemo(() => {
+    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  }, [cartItems]);
+
+  // Calculate discount amount
+  const discount = useMemo(() => {
+    if (!appliedPromo) return 0;
+    return appliedPromo.discountAmount;
+  }, [appliedPromo]);
+
+  // Calculate total
+  const total = useMemo(() => {
+    return subtotal - discount + shipping;
+  }, [subtotal, discount, shipping]);
+
+  // Update shipping cost
+  const updateShipping = (cost) => {
+    setShipping(cost);
+  };
 
   return (
     <CartContext.Provider
       value={{
         cartItems: Array.isArray(cartItems) ? cartItems : [],
         cartItemsCount,
-        cartTotal,
+        subtotal,
+        shipping,
+        total,
         addToCart,
         removeFromCart,
         updateCartItemQuantity,
         clearCart,
-        isCartLoaded
+        isCartLoaded,
+        isEmpty: cartItemsCount === 0,
+        loading,
+        appliedPromo,
+        discount,
+        updateShipping,
       }}
     >
       {children}

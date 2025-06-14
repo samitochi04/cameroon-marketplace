@@ -3,20 +3,26 @@
     "welcome": "Welcome to Cameroon Marketplace",
     "tagline": "The best multi-vendor platform in Cameroon",
     "discover_quality_products": "Discover Quality Products",
-    "hero_subtitle": "Find the best products from local vendors",
+    "hero_subtitle": "Shop the best products from local vendors across Cameroon",
     "shop_now": "Shop Now",
     "featured_products": "Featured Products",
     "view_all": "View All",
-    "error_loading_products": "Error loading products",
+    "error_loading_products": "Error loading products. Please try again later.",
+    "no_products_available": "Sorry, no products available at the moment.",
     "shop_by_category": "Shop by Category",
     "all_categories": "All Categories",
+    "no_categories_available": "Sorry, no categories available at the moment.",
+    "error_loading_categories": "Error loading categories. Please try again later.",
     "top_vendors": "Top Vendors",
     "all_vendors": "All Vendors",
+    "no_vendors_available": "Sorry, no vendors available at the moment.",
+    "error_loading_vendors": "Error loading vendors. Please try again later.",
     "special_offers": "Special Offers",
-    "special_offer_title": "Limited Time Offer",
-    "special_offer_description": "Get amazing deals on selected products for a limited time."
+    "special_offer_title": "Exclusive Deals This Week",
+    "special_offer_description": "Discover amazing discounts on selected products from our top vendors. Limited time offers available now!"
   },
   "common": {
+    "view_details": "View Details",
     "products": "Products",
     "categories": "Categories",
     "search": "Search products...",
@@ -371,6 +377,23 @@
   "add_product": "Add Product",
   "order": "Order",
   "failed_to_load_dashboard_data": "Failed to load dashboard data",
+  "cart": {
+    "your_cart": "Your Shopping Cart",
+    "empty_cart": "Your cart is empty",
+    "empty_cart_message": "Start shopping to add items to your cart",
+    "continue_shopping": "Continue Shopping",
+    "order_summary": "Order Summary",
+    "subtotal": "Subtotal",
+    "shipping": "Shipping",
+    "tax": "Tax",
+    "total": "Total",
+    "free": "Free",
+    "proceed_to_checkout": "Proceed to Checkout",
+    "secure_checkout_message": "Secure checkout - Your payment information is encrypted",
+    "clear_cart": "Clear Cart",
+    "remove": "Remove",
+    "update_quantity": "Update Quantity"
+  },
   "errors": {
     "unauthorized": "Access Denied",
     "unauthorized_message": "You do not have permission to access this page. Please log in with appropriate credentials or contact support if you believe this is an error.",
@@ -378,5 +401,18 @@
     "not_found_message": "The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.",
     "server_error": "Server Error",
     "server_error_message": "Something went wrong on our servers. We're working to fix the issue. Please try again later."
+  },
+  "checkout": {
+    "shipping_method": "Shipping Method",
+    "standard_shipping": "Standard Shipping",
+    "standard_shipping_description": "Delivery within 4-7 business days",
+    "express_shipping_description": "Fast delivery within 1-3 business days",
+    "express_shipping": "Express Shipping",
+    "order_summary": "Order Summary",
+    "shipping_address": "Shipping Address",
+    "checkout": "Checkout",
+    "more_info": "More Information",
+    "billing_address": "Billing Address",
+    "same_as_shipping": "Same as Shipping Address"
   }
 }

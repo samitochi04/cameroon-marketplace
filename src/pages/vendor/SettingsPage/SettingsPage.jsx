@@ -177,8 +177,8 @@ export const SettingsPage = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">{t("store_settings")}</h1>
-        <p className="text-gray-500">{t("manage_store_settings")}</p>
+        <h1 className="text-2xl font-bold">{t("vendor.store_settings")}</h1>
+        <p className="text-gray-500">{t("vendor.manage_store_settings")}</p>
       </div>
       
       {/* Error message */}
@@ -200,9 +200,9 @@ export const SettingsPage = () => {
         {/* Settings tabs */}
         <Tabs value={activeTab} onChange={setActiveTab}>
           <TabList>
-            <Tab value="store">{t("store_information")}</Tab>
-            <Tab value="visuals">{t("store_visuals")}</Tab>
-            <Tab value="payment">{t("payment_settings")}</Tab>
+            <Tab value="store">{t("vendor.store_information")}</Tab>
+            <Tab value="visuals">{t("vendor.store_visuals")}</Tab>
+            <Tab value="payment">{t("vendor.payment_settings")}</Tab>
           </TabList>
           
           {/* Store Information Tab */}
@@ -212,16 +212,16 @@ export const SettingsPage = () => {
                 {/* Store name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t("store_name")} *
+                    {t("vendor.store_name")} *
                   </label>
                   <Controller
                     name="storeName"
                     control={control}
-                    rules={{ required: t("store_name_required") }}
+                    rules={{ required: t("vendor.store_name_required") }}
                     render={({ field }) => (
                       <Input
                         {...field}
-                        placeholder={t("store_name_placeholder")}
+                        placeholder={t("vendor.store_name_placeholder")}
                         error={errors.storeName?.message}
                       />
                     )}
@@ -231,16 +231,16 @@ export const SettingsPage = () => {
                 {/* Store description */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t("store_description")} *
+                    {t("vendor.store_description")} *
                   </label>
                   <Controller
                     name="description"
                     control={control}
-                    rules={{ required: t("description_required") }}
+                    rules={{ required: t("vendor.description_required") }}
                     render={({ field }) => (
                       <Textarea
                         {...field}
-                        placeholder={t("store_description_placeholder")}
+                        placeholder={t("vendor.store_description_placeholder")}
                         rows={4}
                         error={errors.description?.message}
                       />
@@ -252,7 +252,7 @@ export const SettingsPage = () => {
                   {/* Phone */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t("phone_number")}
+                      {t("vendor.phone_number")}
                     </label>
                     <Controller
                       name="phone"
@@ -260,7 +260,7 @@ export const SettingsPage = () => {
                       render={({ field }) => (
                         <Input
                           {...field}
-                          placeholder={t("phone_placeholder")}
+                          placeholder={t("vendor.phone_placeholder")}
                           leftIcon={Phone}
                         />
                       )}
@@ -270,22 +270,22 @@ export const SettingsPage = () => {
                   {/* Email */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t("email_address")} *
+                      {t("vendor.email_address")} *
                     </label>
                     <Controller
                       name="email"
                       control={control}
                       rules={{ 
-                        required: t("email_required"),
+                        required: t("vendor.email_required"),
                         pattern: {
                           value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                          message: t("invalid_email")
+                          message: t("vendor.invalid_email")
                         }
                       }}
                       render={({ field }) => (
                         <Input
                           {...field}
-                          placeholder={t("email_placeholder")}
+                          placeholder={t("vendor.email_placeholder")}
                           leftIcon={Mail}
                           error={errors.email?.message}
                         />
@@ -297,7 +297,7 @@ export const SettingsPage = () => {
                 {/* Address */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t("address")}
+                    {t("vendor.address")}
                   </label>
                   <Controller
                     name="address"
@@ -305,7 +305,7 @@ export const SettingsPage = () => {
                     render={({ field }) => (
                       <Input
                         {...field}
-                        placeholder={t("address_placeholder")}
+                        placeholder={t("vendor.address_placeholder")}
                         leftIcon={MapPin}
                       />
                     )}
@@ -316,7 +316,7 @@ export const SettingsPage = () => {
                   {/* City */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t("city")}
+                      {t("vendor.city")}
                     </label>
                     <Controller
                       name="city"
@@ -324,7 +324,7 @@ export const SettingsPage = () => {
                       render={({ field }) => (
                         <Input
                           {...field}
-                          placeholder={t("city_placeholder")}
+                          placeholder={t("vendor.city_placeholder")}
                         />
                       )}
                     />
@@ -333,7 +333,7 @@ export const SettingsPage = () => {
                   {/* Country */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t("country")}
+                      {t("vendor.country")}
                     </label>
                     <Controller
                       name="country"
@@ -341,7 +341,7 @@ export const SettingsPage = () => {
                       render={({ field }) => (
                         <Input
                           {...field}
-                          placeholder={t("country_placeholder")}
+                          placeholder={t("vendor.country_placeholder")}
                         />
                       )}
                     />
@@ -350,7 +350,7 @@ export const SettingsPage = () => {
                   {/* Website */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t("website")}
+                      {t("vendor.website")}
                     </label>
                     <Controller
                       name="website"
@@ -358,7 +358,7 @@ export const SettingsPage = () => {
                       render={({ field }) => (
                         <Input
                           {...field}
-                          placeholder={t("website_placeholder")}
+                          placeholder={t("vendor.website_placeholder")}
                           leftIcon={Globe}
                         />
                       )}
@@ -369,14 +369,14 @@ export const SettingsPage = () => {
                 {/* Payment settings */}
                 <div className="mt-8">
                   <h2 className="text-lg font-bold mb-4">
-                    {t("payment_settings")}
+                    {t("vendor.payment_settings")}
                   </h2>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Bank name */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t("bank_name")}
+                        {t("vendor.bank_name")}
                       </label>
                       <Controller
                         name="bankName"
@@ -384,7 +384,7 @@ export const SettingsPage = () => {
                         render={({ field }) => (
                           <Input
                             {...field}
-                            placeholder={t("bank_name_placeholder")}
+                            placeholder={t("vendor.bank_name_placeholder")}
                           />
                         )}
                       />
@@ -393,7 +393,7 @@ export const SettingsPage = () => {
                     {/* Account number */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t("account_number")}
+                        {t("vendor.account_number")}
                       </label>
                       <Controller
                         name="accountNumber"
@@ -401,7 +401,7 @@ export const SettingsPage = () => {
                         render={({ field }) => (
                           <Input
                             {...field}
-                            placeholder={t("account_number_placeholder")}
+                            placeholder={t("vendor.account_number_placeholder")}
                           />
                         )}
                       />
@@ -412,7 +412,7 @@ export const SettingsPage = () => {
                     {/* Account holder name */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t("account_holder_name")}
+                        {t("vendor.account_holder_name")}
                       </label>
                       <Controller
                         name="accountHolderName"
@@ -420,7 +420,7 @@ export const SettingsPage = () => {
                         render={({ field }) => (
                           <Input
                             {...field}
-                            placeholder={t("account_holder_name_placeholder")}
+                            placeholder={t("vendor.account_holder_name_placeholder")}
                           />
                         )}
                       />
@@ -429,7 +429,7 @@ export const SettingsPage = () => {
                     {/* Payment methods */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t("payment_methods")}
+                        {t("vendor.payment_methods")}
                       </label>
                       <Controller
                         name="paymentMethods"
@@ -454,7 +454,7 @@ export const SettingsPage = () => {
                                 htmlFor="mobileMoney"
                                 className="ml-3 block text-sm font-medium text-gray-700"
                               >
-                                {t("mobile_money")}
+                                {t("vendor.mobile_money")}
                               </label>
                             </div>
                             
@@ -476,7 +476,7 @@ export const SettingsPage = () => {
                                 htmlFor="bankTransfer"
                                 className="ml-3 block text-sm font-medium text-gray-700"
                               >
-                                {t("bank_transfer")}
+                                {t("vendor.bank_transfer")}
                               </label>
                             </div>
                           </div>
@@ -488,14 +488,14 @@ export const SettingsPage = () => {
                   {/* Mobile money fields */}
                   <div className="mt-4">
                     <h3 className="text-sm font-medium text-gray-700 mb-2">
-                      {t("mobile_money_details")}
+                      {t("vendor.mobile_money_details")}
                     </h3>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* MTN Mobile Money phone */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {t("mtn_mobile_money_phone")}
+                          {t("vendor.mtn_mobile_money_phone")}
                         </label>
                         <Controller
                           name="mtnMobileMoneyPhone"
@@ -503,7 +503,7 @@ export const SettingsPage = () => {
                           render={({ field }) => (
                             <Input
                               {...field}
-                              placeholder={t("mtn_mobile_money_phone_placeholder")}
+                              placeholder={t("vendor.mtn_mobile_money_phone_placeholder")}
                               leftIcon={Phone}
                             />
                           )}
@@ -513,7 +513,7 @@ export const SettingsPage = () => {
                       {/* MTN Account name */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {t("mtn_account_name")}
+                          {t("vendor.mtn_account_name")}
                         </label>
                         <Controller
                           name="mtnAccountName"
@@ -521,7 +521,7 @@ export const SettingsPage = () => {
                           render={({ field }) => (
                             <Input
                               {...field}
-                              placeholder={t("mtn_account_name_placeholder")}
+                              placeholder={t("vendor.mtn_account_name_placeholder")}
                             />
                           )}
                         />
@@ -532,7 +532,7 @@ export const SettingsPage = () => {
                       {/* Orange Money phone */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {t("orange_money_phone")}
+                          {t("vendor.orange_money_phone")}
                         </label>
                         <Controller
                           name="orangeMoneyPhone"
@@ -540,7 +540,7 @@ export const SettingsPage = () => {
                           render={({ field }) => (
                             <Input
                               {...field}
-                              placeholder={t("orange_money_phone_placeholder")}
+                              placeholder={t("vendor.orange_money_phone_placeholder")}
                               leftIcon={Phone}
                             />
                           )}
@@ -550,7 +550,7 @@ export const SettingsPage = () => {
                       {/* Orange Account name */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {t("orange_account_name")}
+                          {t("vendor.orange_account_name")}
                         </label>
                         <Controller
                           name="orangeAccountName"
@@ -558,7 +558,7 @@ export const SettingsPage = () => {
                           render={({ field }) => (
                             <Input
                               {...field}
-                              placeholder={t("orange_account_name_placeholder")}
+                              placeholder={t("vendor.orange_account_name_placeholder")}
                             />
                           )}
                         />
@@ -576,9 +576,9 @@ export const SettingsPage = () => {
               <div className="space-y-6">
                 {/* Store banner */}
                 <div>
-                  <h3 className="text-lg font-medium mb-2">{t("store_banner")}</h3>
+                  <h3 className="text-lg font-medium mb-2">{t("vendor.store_banner")}</h3>
                   <p className="text-sm text-gray-500 mb-4">
-                    {t("store_banner_description")}
+                    {t("vendor.store_banner_description")}
                   </p>
                   
                   {/* Banner image upload */}
@@ -587,7 +587,7 @@ export const SettingsPage = () => {
                       <div className="relative">
                         <img
                           src={bannerImage}
-                          alt={t("store_banner")}
+                          alt={t("vendor.store_banner")}
                           className="w-full h-64 object-cover"
                         />
                         <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -596,7 +596,7 @@ export const SettingsPage = () => {
                             leftIcon={Camera}
                             onClick={() => document.getElementById("banner-upload").click()}
                           >
-                            {t("change_image")}
+                            {t("vendor.change_image")}
                           </Button>
                         </div>
                       </div>
@@ -607,7 +607,7 @@ export const SettingsPage = () => {
                           variant="secondary"
                           onClick={() => document.getElementById("banner-upload").click()}
                         >
-                          {t("upload_banner")}
+                          {t("vendor.upload_banner")}
                         </Button>
                       </div>
                     )}
@@ -621,9 +621,9 @@ export const SettingsPage = () => {
                 
                 {/* Store logo */}
                 <div>
-                  <h3 className="text-lg font-medium mb-2">{t("store_logo")}</h3>
+                  <h3 className="text-lg font-medium mb-2">{t("vendor.store_logo")}</h3>
                   <p className="text-sm text-gray-500 mb-4">
-                    {t("store_logo_description")}
+                    {t("vendor.store_logo_description")}
                   </p>
                   
                   {/* Logo image upload */}
@@ -633,7 +633,7 @@ export const SettingsPage = () => {
                         <div className="relative h-full">
                           <img
                             src={logoImage}
-                            alt={t("store_logo")}
+                            alt={t("vendor.store_logo")}
                             className="w-full h-full object-cover"
                           />
                           <div className="absolute inset-0 bg-black bg-opacity-40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -643,7 +643,7 @@ export const SettingsPage = () => {
                               leftIcon={Camera}
                               onClick={() => document.getElementById("logo-upload").click()}
                             >
-                              {t("change")}
+                              {t("vendor.change")}
                             </Button>
                           </div>
                         </div>
@@ -655,7 +655,7 @@ export const SettingsPage = () => {
                             size="sm"
                             onClick={() => document.getElementById("logo-upload").click()}
                           >
-                            {t("upload")}
+                            {t("vendor.upload")}
                           </Button>
                         </div>
                       )}
@@ -667,13 +667,13 @@ export const SettingsPage = () => {
                     </div>
                     <div className="ml-6">
                       <h4 className="text-sm font-medium text-gray-700">
-                        {t("store_logo_requirements")}
+                        {t("vendor.store_logo_requirements")}
                       </h4>
                       <ul className="text-xs text-gray-500 mt-2 list-disc pl-5 space-y-1">
-                        <li>{t("logo_size_requirement")}</li>
-                        <li>{t("logo_format_requirement")}</li>
-                        <li>{t("logo_quality_requirement")}</li>
-                        <li>{t("logo_background_requirement")}</li>
+                        <li>{t("vendor.logo_size_requirement")}</li>
+                        <li>{t("vendor.logo_format_requirement")}</li>
+                        <li>{t("vendor.logo_quality_requirement")}</li>
+                        <li>{t("vendor.logo_background_requirement")}</li>
                       </ul>
                     </div>
                   </div>
@@ -693,10 +693,10 @@ export const SettingsPage = () => {
           <Button
             type="button"
             variant="outline"
-            onClick={() => reset()}
+            onClick={handleReset}
             disabled={isSaving}
           >
-            {t("reset")}
+            {t("vendor.reset")}
           </Button>
           <Button
             type="submit"
@@ -705,7 +705,7 @@ export const SettingsPage = () => {
             onClick={handleSubmit(onSubmit)}
             disabled={isSaving}
           >
-            {isSaving ? t("saving") : t("save_changes")}
+            {isSaving ? t("vendor.saving") : t("vendor.save_changes")}
           </Button>
         </div>
       </FormProvider>

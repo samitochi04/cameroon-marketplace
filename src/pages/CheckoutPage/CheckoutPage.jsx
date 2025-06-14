@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
-import { useApi } from '@/hooks/useApi';
+import axios from 'axios'; // Import axios directly
 import React from 'react';
 import { Truck, Package } from 'lucide-react'; 
 
@@ -18,14 +18,22 @@ import { Card } from '@/components/ui/Card';
 
 const STEPS = ['address', 'shipping', 'review', 'payment'];
 
+// Define shipping method prices
+const SHIPPING_PRICES = {
+  standard: 2000,
+  express: 5000,
+  pickup: 0
+};
+
 export const CheckoutPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [shippingMethod, setShippingMethod] = useState('standard');
-  const [paymentMethod, setPaymentMethod] = useState('kora');
+  const [paymentMethod, setPaymentMethod] = useState('mtn_mobile_money');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderError, setOrderError] = useState(null);
+  const [shippingCost, setShippingCost] = useState(SHIPPING_PRICES.standard); // Default shipping cost
 
   const methods = useForm({
     mode: 'onChange',
@@ -51,22 +59,39 @@ export const CheckoutPage = () => {
   const { 
     cartItems, 
     subtotal, 
-    tax, 
     total, 
     isEmpty, 
-    shipping, 
     clearCart,
-    appliedPromo
+    appliedPromo,
+    updateShipping,
+    shipping
   } = useCart();
   
-  const { isAuthenticated, user } = useAuth();
-  const { post } = useApi();
+  const { isAuthenticated, user, getToken } = useAuth(); // Add getToken if available
 
   // Prefill form with user data if available
   useEffect(() => {
     if (user) {
       methods.setValue('shippingAddress.fullName', user.name || '');
-      methods.setValue('shippingAddress.phoneNumber', user.phone || '');
+      methods.setValue('shippingAddress.phoneNumber', user.phonenumber || '');
+      
+      // Populate address data if available
+      if (user.address) {
+        // Try to parse the address if it contains city and region information
+        const addressParts = user.address.split(',').map(part => part.trim());
+        
+        methods.setValue('shippingAddress.address', addressParts[0] || user.address);
+        
+        // If address has city information (assuming format: street, city, region)
+        if (addressParts.length > 1) {
+          methods.setValue('shippingAddress.city', addressParts[1]);
+        }
+        
+        // If address has region information
+        if (addressParts.length > 2) {
+          methods.setValue('shippingAddress.region', addressParts[2]);
+        }
+      }
     }
   }, [user, methods]);
 
@@ -100,6 +125,14 @@ export const CheckoutPage = () => {
 
   const handleShippingMethodChange = (method) => {
     setShippingMethod(method);
+    // Update shipping cost based on selected method
+    const newShippingCost = SHIPPING_PRICES[method] || 0;
+    setShippingCost(newShippingCost);
+    
+    // Update shipping cost in cart context
+    if (typeof updateShipping === 'function') {
+      updateShipping(newShippingCost);
+    }
   };
 
   const handlePaymentMethodChange = (method) => {
@@ -120,8 +153,10 @@ export const CheckoutPage = () => {
 
       // Prepare order data
       const orderData = {
+        userId: user?.id,
         items: cartItems.map(item => ({
-          productId: item.productId,
+          productId: item.id,
+          vendor_id: item.vendor_id,
           quantity: item.quantity,
           price: item.price,
         })),
@@ -130,24 +165,35 @@ export const CheckoutPage = () => {
         shippingMethod,
         paymentMethod,
         subtotal,
-        tax,
-        shipping,
-        total,
-        discount: appliedPromo ? appliedPromo.discountAmount : 0,
+        shipping: shippingCost,
+        totalAmount: total,
         promoCode: appliedPromo ? appliedPromo.code : null,
       };
 
-      // Send order to the API
-      const response = await post('/orders', orderData);
+      // Get auth token if available
+      let headers = {};
+      if (getToken) {
+        const token = await getToken();
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+      }
+
+      // Send order to the API using axios directly
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/orders`, 
+        orderData,
+        { headers }
+      );
       
-      // Handle payment initiation if needed
-      if (paymentMethod === 'kora') {
+      // Handle payment initiation for all payment methods
+      if (['mtn_mobile_money', 'orange_money', 'credit_card'].includes(paymentMethod)) {
+        // First, clear the cart
+        clearCart();
+        // Store payment method in localStorage for the payment page to use
+        localStorage.setItem('selectedPaymentMethod', paymentMethod);
         // Redirect to payment page with order ID
         navigate(`/payment/${response.data.order.id}`);
-      } else {
-        // For other payment methods or COD, go to confirmation
-        clearCart();
-        navigate(`/order-confirmation/${response.data.order.id}`);
       }
     } catch (error) {
       console.error('Error placing order:', error);
@@ -214,9 +260,18 @@ export const CheckoutPage = () => {
     }
   };
 
+  // Format currency helper function
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('fr-CM', {
+      style: 'currency',
+      currency: 'XAF',
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">{t('checkout')}</h1>
+      <h1 className="text-3xl font-bold mb-6">{t('checkout.checkout')}</h1>
       
       {/* Error message */}
       {orderError && (
@@ -283,9 +338,10 @@ export const CheckoutPage = () => {
         {/* Order summary */}
         <div>
           <Card className="p-6 sticky top-4">
-            <h2 className="text-xl font-semibold mb-4">{t('order_summary')}</h2>
+            <h2 className="text-xl font-semibold mb-4">{t('checkout.order_summary')}</h2>
             
             <div className="space-y-2 border-b border-gray-200 pb-4 mb-4">
+              {console.log('cartItems:', JSON.stringify(cartItems, null, 2))}
               {cartItems.map(item => (
                 <div key={item.id} className="flex justify-between text-sm">
                   <div>
@@ -297,11 +353,7 @@ export const CheckoutPage = () => {
                     )}
                   </div>
                   <div>
-                    {new Intl.NumberFormat('fr-CM', {
-                      style: 'currency',
-                      currency: 'XAF',
-                      maximumFractionDigits: 0
-                    }).format(item.price * item.quantity)}
+                    {formatCurrency(item.price * item.quantity)}
                   </div>
                 </div>
               ))}
@@ -311,59 +363,43 @@ export const CheckoutPage = () => {
               <div className="flex justify-between">
                 <span>{t('subtotal')}</span>
                 <span>
-                  {new Intl.NumberFormat('fr-CM', {
-                    style: 'currency',
-                    currency: 'XAF',
-                    maximumFractionDigits: 0
-                  }).format(subtotal)}
+                  {formatCurrency(subtotal)}
                 </span>
               </div>
               
-              {appliedPromo && (
+              {/* {appliedPromo && (
                 <div className="flex justify-between text-green-600">
                   <span>{t('discount')}</span>
                   <span>
-                    -{new Intl.NumberFormat('fr-CM', {
-                      style: 'currency',
-                      currency: 'XAF',
-                      maximumFractionDigits: 0
-                    }).format(appliedPromo.discountAmount)}
+                    -{formatCurrency(appliedPromo.discountAmount)}
                   </span>
                 </div>
-              )}
+              )} */}
               
               <div className="flex justify-between">
                 <span>{t('shipping')}</span>
                 <span>
-                  {shipping > 0 
-                    ? new Intl.NumberFormat('fr-CM', {
-                        style: 'currency',
-                        currency: 'XAF',
-                        maximumFractionDigits: 0
-                      }).format(shipping)
+                  {shippingCost > 0 
+                    ? formatCurrency(shippingCost)
                     : t('free')}
                 </span>
-              </div>
-              
-              <div className="flex justify-between">
-                <span>{t('tax')}</span>
-                <span>
-                  {new Intl.NumberFormat('fr-CM', {
-                    style: 'currency',
-                    currency: 'XAF',
-                    maximumFractionDigits: 0
-                  }).format(tax)}
-                </span>
+                
+                {/* Show shipping method name if selected */}
+                {shippingMethod && (
+                  <span className="text-xs text-gray-500 ml-1">
+                    ({shippingMethod === 'express' 
+                      ? t('checkout.express_shipping')
+                      : shippingMethod === 'pickup'
+                      ? t('checkout.store_pickup')
+                      : t('checkout.standard_shipping')})
+                  </span>
+                )}
               </div>
               
               <div className="flex justify-between font-bold pt-2 border-t border-gray-200 text-lg">
                 <span>{t('total')}</span>
                 <span>
-                  {new Intl.NumberFormat('fr-CM', {
-                    style: 'currency',
-                    currency: 'XAF',
-                    maximumFractionDigits: 0
-                  }).format(total)}
+                  {formatCurrency(subtotal + shippingCost )}
                 </span>
               </div>
             </div>

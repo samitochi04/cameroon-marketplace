@@ -24,9 +24,9 @@ export const PaymentSettingsTab = () => {
             <div className="flex items-start">
               <Info className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-medium">{t("cinetpay_integration")}</h4>
+                <h4 className="font-medium">{t("vendor.cinetpay_integration")}</h4>
                 <p className="text-sm mt-1">
-                  {t("cinetpay_integration_description")}
+                  {t("vendor.cinetpay_integration_description")}
                 </p>
                 <Button
                   variant="outline"
@@ -34,7 +34,7 @@ export const PaymentSettingsTab = () => {
                   className="mt-2"
                   onClick={() => setShowCinetpayInfo(false)}
                 >
-                  {t("got_it")}
+                  {t("vendor.got_it")}
                 </Button>
               </div>
             </div>
@@ -42,15 +42,15 @@ export const PaymentSettingsTab = () => {
         )}
       
         <div className="pt-6 border-t">
-          <h3 className="text-lg font-medium mb-2">{t("payment_methods")}</h3>
+          <h3 className="text-lg font-medium mb-2">{t("vendor.payment_methods")}</h3>
           <p className="text-sm text-gray-500 mb-4">
-            {t("payment_methods_description")}
+            {t("vendor.payment_methods_description")}
           </p>
           
           {/* Payment Methods */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              {t("accepted_payment_methods")}
+              {t("vendor.accepted_payment_methods")}
             </label>
             <Controller
               name="paymentMethods"
@@ -83,7 +83,7 @@ export const PaymentSettingsTab = () => {
                         }}
                       />
                     </div>
-                    <span>{t("mtn_mobile_money")}</span>
+                    <span>{t("vendor.mtn_mobile_money")}</span>
                   </div>
                   
                   {/* Orange Money */}
@@ -112,7 +112,7 @@ export const PaymentSettingsTab = () => {
                         }}
                       />
                     </div>
-                    <span>{t("orange_money")}</span>
+                    <span>{t("vendor.orange_money")}</span>
                   </div>
                   
                   {/* Credit Card */}
@@ -131,7 +131,7 @@ export const PaymentSettingsTab = () => {
                     }}
                   >
                     <CreditCard className="w-5 h-5 mr-2" />
-                    <span>{t("credit_card")}</span>
+                    <span>{t("vendor.credit_card")}</span>
                   </div>
                 </div>
               )}
@@ -142,9 +142,9 @@ export const PaymentSettingsTab = () => {
         {/* Mobile Money Settings */}
         {(selectedPaymentMethods.includes("mtn_mobile_money") || selectedPaymentMethods.includes("orange_money")) && (
           <div className="pt-6 border-t">
-            <h3 className="text-lg font-medium mb-2">{t("mobile_money_settings")}</h3>
+            <h3 className="text-lg font-medium mb-2">{t("vendor.mobile_money_settings")}</h3>
             <p className="text-sm text-gray-500 mb-4">
-              {t("mobile_money_settings_description")}
+              {t("vendor.mobile_money_settings_description")}
             </p>
             
             {/* MTN Mobile Money Settings */}
@@ -162,29 +162,29 @@ export const PaymentSettingsTab = () => {
                       }}
                     />
                   </div>
-                  {t("mtn_mobile_money_settings")}
+                  {t("vendor.mtn_mobile_money_settings")}
                 </h4>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* MTN Mobile Money Phone */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t("mtn_mobile_money_phone")} *
+                      {t("vendor.mtn_mobile_money_phone")} *
                     </label>
                     <Controller
                       name="mtnMobileMoneyPhone"
                       control={control}
                       rules={{ 
-                        required: selectedPaymentMethods.includes("mtn_mobile_money") ? t("mtn_phone_required") : false,
+                        required: selectedPaymentMethods.includes("mtn_mobile_money") ? t("vendor.mtn_phone_required") : false,
                         pattern: {
                           value: /^[0-9]{9}$/,
-                          message: t("phone_format_invalid")
+                          message: t("vendor.phone_format_invalid")
                         }
                       }}
                       render={({ field }) => (
                         <Input
                           {...field}
-                          placeholder="6XXXXXXXX"
+                          placeholder={t("vendor.mtn_mobile_money_phone_placeholder")}
                           leftIcon={Phone}
                           error={errors.mtnMobileMoneyPhone?.message}
                         />
@@ -195,18 +195,18 @@ export const PaymentSettingsTab = () => {
                   {/* MTN Name */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t("account_holder_name")} *
+                      {t("vendor.account_holder_name")} *
                     </label>
                     <Controller
                       name="mtnAccountName"
                       control={control}
                       rules={{ 
-                        required: selectedPaymentMethods.includes("mtn_mobile_money") ? t("account_name_required") : false
+                        required: selectedPaymentMethods.includes("mtn_mobile_money") ? t("vendor.account_name_required") : false
                       }}
                       render={({ field }) => (
                         <Input
                           {...field}
-                          placeholder={t("account_holder_name_placeholder")}
+                          placeholder={t("vendor.account_holder_name_placeholder")}
                           error={errors.mtnAccountName?.message}
                         />
                       )}
@@ -231,29 +231,29 @@ export const PaymentSettingsTab = () => {
                       }}
                     />
                   </div>
-                  {t("orange_money_settings")}
+                  {t("vendor.orange_money_settings")}
                 </h4>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Orange Money Phone */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t("orange_money_phone")} *
+                      {t("vendor.orange_money_phone")} *
                     </label>
                     <Controller
                       name="orangeMoneyPhone"
                       control={control}
                       rules={{ 
-                        required: selectedPaymentMethods.includes("orange_money") ? t("orange_phone_required") : false,
+                        required: selectedPaymentMethods.includes("orange_money") ? t("vendor.orange_phone_required") : false,
                         pattern: {
                           value: /^[0-9]{9}$/,
-                          message: t("phone_format_invalid")
+                          message: t("vendor.phone_format_invalid")
                         }
                       }}
                       render={({ field }) => (
                         <Input
                           {...field}
-                          placeholder="6XXXXXXXX"
+                          placeholder={t("vendor.orange_money_phone_placeholder")}
                           leftIcon={Phone}
                           error={errors.orangeMoneyPhone?.message}
                         />
@@ -264,18 +264,18 @@ export const PaymentSettingsTab = () => {
                   {/* Orange Name */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t("account_holder_name")} *
+                      {t("vendor.account_holder_name")} *
                     </label>
                     <Controller
                       name="orangeAccountName"
                       control={control}
                       rules={{ 
-                        required: selectedPaymentMethods.includes("orange_money") ? t("account_name_required") : false
+                        required: selectedPaymentMethods.includes("orange_money") ? t("vendor.account_name_required") : false
                       }}
                       render={({ field }) => (
                         <Input
                           {...field}
-                          placeholder={t("account_holder_name_placeholder")}
+                          placeholder={t("vendor.account_holder_name_placeholder")}
                           error={errors.orangeAccountName?.message}
                         />
                       )}
@@ -290,27 +290,27 @@ export const PaymentSettingsTab = () => {
         {/* Bank Account for Credit Card Processing */}
         {selectedPaymentMethods.includes("credit_card") && (
           <div className="pt-6 border-t">
-            <h3 className="text-lg font-medium mb-2">{t("bank_account_information")}</h3>
+            <h3 className="text-lg font-medium mb-2">{t("vendor.bank_account_information")}</h3>
             <p className="text-sm text-gray-500 mb-4">
-              {t("bank_account_for_credit_card_description")}
+              {t("vendor.bank_account_for_credit_card_description")}
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Bank Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t("bank_name")} *
+                  {t("vendor.bank_name")} *
                 </label>
                 <Controller
                   name="bankName"
                   control={control}
                   rules={{ 
-                    required: selectedPaymentMethods.includes("credit_card") ? t("bank_name_required") : false
+                    required: selectedPaymentMethods.includes("credit_card") ? t("vendor.bank_name_required") : false
                   }}
                   render={({ field }) => (
                     <Input
                       {...field}
-                      placeholder={t("bank_name_placeholder")}
+                      placeholder={t("vendor.bank_name_placeholder")}
                       leftIcon={CreditCard}
                       error={errors.bankName?.message}
                     />
@@ -321,18 +321,18 @@ export const PaymentSettingsTab = () => {
               {/* Account Number */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t("account_number")} *
+                  {t("vendor.account_number")} *
                 </label>
                 <Controller
                   name="accountNumber"
                   control={control}
                   rules={{ 
-                    required: selectedPaymentMethods.includes("credit_card") ? t("account_number_required") : false 
+                    required: selectedPaymentMethods.includes("credit_card") ? t("vendor.account_number_required") : false 
                   }}
                   render={({ field }) => (
                     <Input
                       {...field}
-                      placeholder={t("account_number_placeholder")}
+                      placeholder={t("vendor.account_number_placeholder")}
                       error={errors.accountNumber?.message}
                     />
                   )}
@@ -343,18 +343,18 @@ export const PaymentSettingsTab = () => {
             {/* Account Holder Name */}
             <div className="mt-6">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t("account_holder_name")} *
+                {t("vendor.account_holder_name")} *
               </label>
               <Controller
                 name="accountHolderName"
                 control={control}
                 rules={{ 
-                  required: selectedPaymentMethods.includes("credit_card") ? t("account_holder_name_required") : false
+                  required: selectedPaymentMethods.includes("credit_card") ? t("vendor.account_holder_name_required") : false
                 }}
                 render={({ field }) => (
                   <Input
                     {...field}
-                    placeholder={t("account_holder_name_placeholder")}
+                    placeholder={t("vendor.account_holder_name_placeholder")}
                     error={errors.accountHolderName?.message}
                   />
                 )}
@@ -364,16 +364,16 @@ export const PaymentSettingsTab = () => {
         )}
         
         <div className="pt-6 border-t">
-          <h3 className="text-lg font-medium mb-2">{t("payout_preferences")}</h3>
+          <h3 className="text-lg font-medium mb-2">{t("vendor.payout_preferences")}</h3>
           <p className="text-sm text-gray-500 mb-4">
-            {t("payout_preferences_description")}
+            {t("vendor.payout_preferences_description")}
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Payout Threshold */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t("payout_threshold")}
+                {t("vendor.payout_threshold")}
               </label>
               <Controller
                 name="payoutThreshold"
@@ -391,14 +391,14 @@ export const PaymentSettingsTab = () => {
                 )}
               />
               <p className="mt-1 text-xs text-gray-500">
-                {t("payout_threshold_description")}
+                {t("vendor.payout_threshold_description")}
               </p>
             </div>
             
             {/* Payout Frequency */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t("payout_frequency")}
+                {t("vendor.payout_frequency")}
               </label>
               <Controller
                 name="payoutFrequency"
@@ -407,9 +407,9 @@ export const PaymentSettingsTab = () => {
                   <Select
                     {...field}
                     options={[
-                      { value: "weekly", label: t("weekly") },
-                      { value: "biweekly", label: t("biweekly") },
-                      { value: "monthly", label: t("monthly") },
+                      { value: "weekly", label: t("vendor.weekly") },
+                      { value: "biweekly", label: t("vendor.biweekly") },
+                      { value: "monthly", label: t("vendor.monthly") },
                     ]}
                   />
                 )}
@@ -420,7 +420,7 @@ export const PaymentSettingsTab = () => {
         
         {/* Commission Information */}
         <div className="pt-6 border-t">
-          <h3 className="text-lg font-medium mb-2">{t("commission_information")}</h3>
+          <h3 className="text-lg font-medium mb-2">{t("vendor.commission_information")}</h3>
           
           <div className="bg-gray-50 p-4 rounded-md">
             <button 
@@ -429,18 +429,18 @@ export const PaymentSettingsTab = () => {
               type="button" 
             >
               <DollarSign className="w-5 h-5 mr-2" />
-              <span>{t("view_commission_structure")}</span>
+              <span>{t("vendor.view_commission_structure")}</span>
             </button>
             
             {showCommissionInfo && (
               <div className="mt-4 space-y-3">
-                <p className="text-sm">{t("price_markup_explanation")}</p>
+                <p className="text-sm">{t("vendor.price_markup_explanation")}</p>
                 
                 <table className="min-w-full text-sm">
                   <thead>
                     <tr className="bg-gray-100">
-                      <th className="p-2 text-left">{t("transaction_amount")}</th>
-                      <th className="p-2 text-right">{t("markup_percentage")}</th>
+                      <th className="p-2 text-left">{t("vendor.transaction_amount")}</th>
+                      <th className="p-2 text-right">{t("vendor.markup_percentage")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -468,7 +468,7 @@ export const PaymentSettingsTab = () => {
                 </table>
                 
                 <Alert variant="info" className="text-xs mt-2">
-                  {t("commission_note")}
+                  {t("vendor.commission_note")}
                 </Alert>
               </div>
             )}

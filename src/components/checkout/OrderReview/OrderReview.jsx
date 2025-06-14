@@ -11,7 +11,7 @@ export const OrderReview = ({
   paymentMethod
 }) => {
   const { t } = useTranslation();
-  const { cartItems, subtotal, tax, shipping, discount, total, appliedPromo } = useCart();
+  const { cartItems, subtotal, shipping, discount, total, appliedPromo } = useCart();
   
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('fr-CM', {
@@ -34,10 +34,31 @@ export const OrderReview = ({
   
   const getPaymentMethodName = () => {
     switch(paymentMethod) {
+      case 'mtn_mobile_money':
+        return 'MTN Mobile Money';
+      case 'orange_money':
+        return 'Orange Money';
+      case 'credit_card':
+        return t('credit_card');
       case 'cod':
         return t('cash_on_delivery');
       default:
-        return 'Kora Pay';
+        return paymentMethod;
+    }
+  };
+
+  const getPaymentMethodDescription = () => {
+    switch(paymentMethod) {
+      case 'mtn_mobile_money':
+        return t('mtn_mobile_money_description', 'Pay securely with MTN Mobile Money');
+      case 'orange_money':
+        return t('orange_money_description', 'Pay securely with Orange Money');
+      case 'credit_card':
+        return t('credit_card_description', 'Pay securely with your credit/debit card');
+      case 'cod':
+        return t('cod_payment_description', 'Pay when your order is delivered');
+      default:
+        return t('online_payment_note', 'You will be redirected to complete your payment securely');
     }
   };
 
@@ -141,12 +162,9 @@ export const OrderReview = ({
             <h3 className="font-medium">{t('payment_method')}</h3>
           </div>
           
-          <p>{getPaymentMethodName()}</p>
+          <p className="font-medium">{getPaymentMethodName()}</p>
           <p className="text-sm text-gray-500 mt-1">
-            {paymentMethod === 'cod' 
-              ? t('payment_on_delivery_note')
-              : t('online_payment_note')
-            }
+            {getPaymentMethodDescription()}
           </p>
         </Card>
       </div>
@@ -175,10 +193,10 @@ export const OrderReview = ({
             <span>{shipping > 0 ? formatCurrency(shipping) : t('free')}</span>
           </div>
           
-          <div className="flex justify-between text-sm">
+          {/* <div className="flex justify-between text-sm">
             <span className="text-gray-500">{t('tax')}</span>
             <span>{formatCurrency(tax)}</span>
-          </div>
+          </div> */}
           
           <div className="border-t border-gray-200 mt-2 pt-2 flex justify-between font-medium">
             <span>{t('total')}</span>

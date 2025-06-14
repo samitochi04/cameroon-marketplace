@@ -1,197 +1,108 @@
-const paymentService = require('../services/payment.service');
+const { createCinetpayPayment } = require('../services/cinetpayService');
+const supabase = require('../supabase/supabaseClient');
 
-// Initialize payment
-exports.initiatePayment = async (req, res) => {
+exports.initializePayment = async (req, res) => {
   try {
-    const { amount, customer, description, metadata, vendorId } = req.body;
+    const { orderId, amount, customer, description, metadata } = req.body;
     
-    if (!amount || !customer || !vendorId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields for payment initialization',
+    if (!orderId || !amount) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Order ID and amount are required' 
       });
     }
-
-    const payment = await paymentService.initiateTransaction({
+    
+    // Get order details from database if needed
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .single();
+    
+    if (orderError || !order) {
+      console.error('Error fetching order:', orderError);
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Order not found' 
+      });
+    }
+    
+    // Create payment in Cinetpay
+    const paymentData = await createCinetpayPayment({
+      transaction_id: orderId.toString(),
       amount,
-      customer,
-      description,
-      metadata,
-      vendorId
+      customer_name: customer?.name || order.shippingAddress?.fullName || 'Customer',
+      customer_email: customer?.email || 'customer@example.com',
+      customer_phone_number: customer?.phone || order.shippingAddress?.phoneNumber || '',
+      payment_method: metadata?.payment_method || 'ALL',
     });
-
-    return res.status(200).json({
-      success: true,
-      data: payment,
-    });
-  } catch (error) {
-    console.error('Initialize payment error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to initialize payment',
-      error: error.message,
-    });
-  }
-};
-
-// Verify payment
-exports.verifyPayment = async (req, res) => {
-  try {
-    const { reference } = req.params;
     
-    if (!reference) {
-      return res.status(400).json({
-        success: false,
-        message: 'Transaction reference is required',
-      });
-    }
-
-    const payment = await paymentService.verifyTransaction(reference);
-
-    return res.status(200).json({
-      success: true,
-      data: payment,
-    });
-  } catch (error) {
-    console.error('Verify payment error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to verify payment',
-      error: error.message,
-    });
-  }
-};
-
-// Handle webhook from Cinetpay
-exports.handleWebhook = async (req, res) => {
-  try {
-    const webhookData = req.body;
-    
-    // Verify webhook authenticity
-    // (Cinetpay webhooks should be verified with appropriate security checks)
-    
-    // Process webhook data
-    if (webhookData.status === 'ACCEPTED') {
-      await paymentService.verifyTransaction(webhookData.transaction_id);
-    }
-
-    // Always return 200 to acknowledge receipt of webhook
-    return res.status(200).json({ received: true });
-  } catch (error) {
-    console.error('Webhook handler error:', error);
-    // Still return 200 to acknowledge receipt, but log the error
-    return res.status(200).json({ received: true });
-  }
-};
-
-// Register vendor with Cinetpay
-exports.registerVendor = async (req, res) => {
-  try {
-    const vendorId = req.user.id;
-    const vendorData = {
-      id: vendorId,
-      ...req.body
-    };
-    
-    const result = await paymentService.registerVendorWithCinetpay(vendorData);
-
-    return res.status(200).json({
-      success: true,
-      message: 'Vendor registered successfully with Cinetpay',
-      data: result,
-    });
-  } catch (error) {
-    console.error('Register vendor with Cinetpay error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to register vendor with Cinetpay',
-      error: error.message,
-    });
-  }
-};
-
-// Get vendor payment information
-exports.getVendorPaymentInfo = async (req, res) => {
-  try {
-    const vendorId = req.user.id;
-    
-    // Get earnings history
-    const earningsHistory = await paymentService.getVendorEarningsHistory(vendorId);
-    
-    // Get payout history
-    const payoutHistory = await paymentService.getVendorPayoutHistory(vendorId);
-    
-    // Get transaction history
-    const transactionHistory = await paymentService.getVendorTransactionHistory(vendorId);
-    
-    // Calculate earnings and commission stats
-    const totalEarnings = transactionHistory.reduce((sum, tx) => 
-      tx.status === 'successful' ? sum + Number(tx.vendor_amount) : sum, 0
-    );
-    
-    const totalCommission = transactionHistory.reduce((sum, tx) => 
-      tx.status === 'successful' ? sum + Number(tx.commission) : sum, 0
-    );
+    // Update order with payment reference
+    await supabase
+      .from('orders')
+      .update({ 
+        payment_reference: paymentData.payment_token,
+        payment_status: 'pending' 
+      })
+      .eq('id', orderId);
     
     return res.status(200).json({
       success: true,
       data: {
-        earningsHistory,
-        payoutHistory,
-        transactionHistory,
-        stats: {
-          totalEarnings,
-          totalCommission,
-          transactionCount: transactionHistory.filter(tx => tx.status === 'successful').length,
-          pendingPayouts: payoutHistory.filter(p => p.status === 'pending').length
-        }
-      },
+        paymentUrl: paymentData.payment_url,
+        paymentToken: paymentData.payment_token,
+        transactionId: orderId
+      }
     });
+    
   } catch (error) {
-    console.error('Get vendor payment info error:', error);
+    console.error('Payment initialization error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to get vendor payment information',
-      error: error.message,
+      message: 'Failed to initialize payment',
+      error: error.message
     });
   }
 };
 
-// Update vendor payment settings
-exports.updateVendorPaymentSettings = async (req, res) => {
+exports.verifyPayment = async (req, res) => {
   try {
-    const vendorId = req.user.id;
-    const { bankName, accountNumber, accountHolderName, payoutFrequency, payoutThreshold, paymentMethods } = req.body;
+    const { transaction_id } = req.body;
     
-    // Update vendor payment settings in database
+    if (!transaction_id) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Transaction ID is required' 
+      });
+    }
+    
+    // Update order status to paid
     const { data, error } = await supabase
-      .from('vendors')
-      .update({
-        bank_name: bankName,
-        account_number: accountNumber,
-        account_holder_name: accountHolderName,
-        payout_frequency: payoutFrequency,
-        payout_threshold: payoutThreshold,
-        payment_methods: paymentMethods,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', vendorId)
-      .select()
-      .single();
-
-    if (error) throw error;
+      .from('orders')
+      .update({ status: 'paid', payment_status: 'completed' })
+      .eq('id', transaction_id)
+      .select();
+    
+    if (error) {
+      console.error('Error updating order status:', error);
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to verify payment' 
+      });
+    }
     
     return res.status(200).json({
       success: true,
-      message: 'Payment settings updated successfully',
-      data,
+      message: 'Payment verified successfully',
+      data
     });
+    
   } catch (error) {
-    console.error('Update vendor payment settings error:', error);
+    console.error('Payment verification error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to update payment settings',
-      error: error.message,
+      message: 'Failed to verify payment',
+      error: error.message
     });
   }
 };
