@@ -2,13 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Package, MapPin, CreditCard, Truck, AlertTriangle, Clock } from 'lucide-react';
-import { useApi } from '@/hooks/useApi';
+import axios from 'axios';
 
 const CustomerOrderDetail = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { orderId } = useParams();
-  const { get } = useApi();
   const [order, setOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,18 +16,29 @@ const CustomerOrderDetail = () => {
     const fetchOrderDetails = async () => {
       try {
         setIsLoading(true);
-        const response = await get(`/orders/${orderId}`);
-        setOrder(response.data);
+        
+        // Fetch order from our API
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/orders/${orderId}`
+        );
+        
+        if (response.data?.success) {
+          setOrder(response.data.order);
+        } else {
+          setError(response.data?.message || t('order_not_found'));
+        }
       } catch (error) {
         console.error('Failed to fetch order details:', error);
-        setError(t('failed_to_load_order_details'));
+        setError(error.response?.data?.message || t('failed_to_load_order_details'));
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchOrderDetails();
-  }, [get, orderId, t]);
+    if (orderId) {
+      fetchOrderDetails();
+    }
+  }, [orderId, t]);
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -36,7 +46,7 @@ const CustomerOrderDetail = () => {
       style: 'currency',
       currency: 'XAF',
       minimumFractionDigits: 0
-    }).format(amount);
+    }).format(amount || 0);
   };
   
   // Get status color
@@ -58,6 +68,7 @@ const CustomerOrderDetail = () => {
   // Get payment status color
   const getPaymentStatusColor = (status) => {
     switch (status) {
+      case 'completed':
       case 'paid':
         return 'bg-green-100 text-green-800';
       case 'pending':
@@ -91,7 +102,7 @@ const CustomerOrderDetail = () => {
         <div className="bg-white p-8 rounded-lg shadow-sm text-center">
           <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-2" />
           <h2 className="text-xl font-bold text-gray-900 mb-2">{t('order_not_found')}</h2>
-          <p className="text-gray-500 mb-6">{error || t('order_not_found_description')}</p>
+          <p className="text-gray-500 mb-6">{error || t('order_not_found_message')}</p>
           <Link
             to="/account/orders"
             className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
@@ -102,6 +113,9 @@ const CustomerOrderDetail = () => {
       </div>
     );
   }
+
+  // Safe order ID display
+  const displayOrderId = order.id ? String(order.id).slice(0, 8) : 'N/A';
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -115,7 +129,7 @@ const CustomerOrderDetail = () => {
       
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">{t('order')} #{order.id.slice(0, 8)}</h1>
+          <h1 className="text-2xl font-bold">{t('order')} #{displayOrderId}</h1>
           <p className="text-gray-500">
             {t('placed_on')} {new Date(order.created_at).toLocaleDateString()}
           </p>
@@ -172,10 +186,10 @@ const CustomerOrderDetail = () => {
                 <h3 className="text-sm font-medium">{t('processing')}</h3>
                 <p className="text-xs text-gray-500">
                   {['processing', 'completed'].includes(order.status)
-                    ? t('your_order_is_being_processed')
+                    ? t('your_order_is_being_processed', 'Your order is being processed')
                     : order.status === 'cancelled'
-                    ? t('order_processing_cancelled')
-                    : t('waiting_for_processing')}
+                    ? t('order_processing_cancelled', 'Order processing cancelled')
+                    : t('waiting_for_processing', 'Waiting for processing')}
                 </p>
               </div>
             </div>
@@ -201,10 +215,10 @@ const CustomerOrderDetail = () => {
                 <h3 className="text-sm font-medium">{t('shipped')}</h3>
                 <p className="text-xs text-gray-500">
                   {order.status === 'completed'
-                    ? t('your_order_has_been_shipped')
+                    ? t('your_order_has_been_shipped', 'Your order has been shipped')
                     : order.status === 'cancelled'
-                    ? t('shipping_cancelled')
-                    : t('waiting_for_shipping')}
+                    ? t('shipping_cancelled', 'Shipping cancelled')
+                    : t('waiting_for_shipping', 'Waiting for shipping')}
                 </p>
                 {order.tracking_number && (
                   <p className="text-xs text-gray-900 mt-1">
@@ -235,10 +249,10 @@ const CustomerOrderDetail = () => {
                 <h3 className="text-sm font-medium">{t('delivered')}</h3>
                 <p className="text-xs text-gray-500">
                   {order.status === 'completed'
-                    ? t('your_order_has_been_delivered')
+                    ? t('your_order_has_been_delivered', 'Your order has been delivered')
                     : order.status === 'cancelled'
-                    ? t('delivery_cancelled')
-                    : t('waiting_for_delivery')}
+                    ? t('delivery_cancelled', 'Delivery cancelled')
+                    : t('waiting_for_delivery', 'Waiting for delivery')}
                 </p>
               </div>
             </div>
@@ -251,11 +265,11 @@ const CustomerOrderDetail = () => {
         <h2 className="text-lg font-semibold mb-4">{t('order_items')}</h2>
         
         <div className="divide-y divide-gray-200">
-          {order.items.map((item) => (
-            <div key={item.id} className="py-4 flex">
+          {(order.items || []).map((item, index) => (
+            <div key={item.id || index} className="py-4 flex">
               <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md border border-gray-200">
                 <img
-                  src={item.image || '/placeholder-product.jpg'}
+                  src={item.image || '/product-placeholder.jpg'}
                   alt={item.name}
                   className="h-full w-full object-cover object-center"
                 />
@@ -264,11 +278,11 @@ const CustomerOrderDetail = () => {
                 <div>
                   <div className="flex justify-between text-base font-medium text-gray-900">
                     <h3>
-                      <Link to={`/products/${item.productId}`}>
+                      <Link to={`/products/${item.product_id || item.productId}`}>
                         {item.name}
                       </Link>
                     </h3>
-                    <p className="ml-4">{formatCurrency(item.price * item.quantity)}</p>
+                    <p className="ml-4">{formatCurrency(item.total || (item.price * item.quantity))}</p>
                   </div>
                   <p className="mt-1 text-sm text-gray-500">
                     {t('quantity')}: {item.quantity} × {formatCurrency(item.price)}
@@ -285,8 +299,8 @@ const CustomerOrderDetail = () => {
                   )}
                 </div>
                 <div className="flex flex-1 items-end">
-                  <div className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(item.status)}`}>
-                    {t(item.status)}
+                  <div className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(item.status || 'pending')}`}>
+                    {t(item.status || 'pending')}
                   </div>
                 </div>
               </div>
@@ -304,10 +318,10 @@ const CustomerOrderDetail = () => {
           </div>
           
           <div className="space-y-1 mb-6">
-            <p className="font-medium">{order.shippingAddress.fullName}</p>
-            <p>{order.shippingAddress.address}</p>
-            <p>{order.shippingAddress.city}, {order.shippingAddress.region}</p>
-            <p>{order.shippingAddress.phoneNumber}</p>
+            <p className="font-medium">{order.shipping_address?.fullName || 'N/A'}</p>
+            <p>{order.shipping_address?.address || 'N/A'}</p>
+            <p>{order.shipping_address?.city || 'N/A'}, {order.shipping_address?.region || 'N/A'}</p>
+            <p>{order.shipping_address?.phoneNumber || 'N/A'}</p>
           </div>
           
           <div className="flex items-center mb-4">
@@ -316,10 +330,10 @@ const CustomerOrderDetail = () => {
           </div>
           
           <div className="space-y-1">
-            <p className="font-medium">{order.billingAddress.fullName}</p>
-            <p>{order.billingAddress.address}</p>
-            <p>{order.billingAddress.city}, {order.billingAddress.region}</p>
-            <p>{order.billingAddress.phoneNumber}</p>
+            <p className="font-medium">{order.billing_address?.fullName || order.shipping_address?.fullName || 'N/A'}</p>
+            <p>{order.billing_address?.address || order.shipping_address?.address || 'N/A'}</p>
+            <p>{order.billing_address?.city || order.shipping_address?.city || 'N/A'}, {order.billing_address?.region || order.shipping_address?.region || 'N/A'}</p>
+            <p>{order.billing_address?.phoneNumber || order.shipping_address?.phoneNumber || 'N/A'}</p>
           </div>
         </div>
         
@@ -333,12 +347,17 @@ const CustomerOrderDetail = () => {
           <div className="space-y-2 mb-6">
             <div className="flex justify-between">
               <span>{t('payment_method')}:</span>
-              <span>{order.paymentMethod === 'kora' ? 'Kora Pay' : t(order.paymentMethod)}</span>
+              <span>
+                {order.payment_method === 'simulated_payment' ? 'Simulated Payment (Dev)' :
+                 order.payment_method === 'mtn_mobile_money' ? 'MTN Mobile Money' :
+                 order.payment_method === 'orange_money' ? 'Orange Money' :
+                 t(order.payment_method || 'mobile_money')}
+              </span>
             </div>
             <div className="flex justify-between">
               <span>{t('payment_status')}:</span>
-              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getPaymentStatusColor(order.paymentStatus)}`}>
-                {t(order.paymentStatus)}
+              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getPaymentStatusColor(order.payment_status)}`}>
+                {t(order.payment_status)}
               </span>
             </div>
           </div>
@@ -354,27 +373,15 @@ const CustomerOrderDetail = () => {
               <span>{formatCurrency(order.subtotal)}</span>
             </div>
             
-            {order.discount > 0 && (
-              <div className="flex justify-between text-green-600">
-                <span>{t('discount')}:</span>
-                <span>-{formatCurrency(order.discount)}</span>
-              </div>
-            )}
-            
             <div className="flex justify-between">
               <span>{t('shipping')}:</span>
-              <span>{formatCurrency(order.shipping)}</span>
-            </div>
-            
-            <div className="flex justify-between">
-              <span>{t('tax')}:</span>
-              <span>{formatCurrency(order.tax)}</span>
+              <span>{order.shipping_fee > 0 ? formatCurrency(order.shipping_fee) : t('free')}</span>
             </div>
             
             <div className="border-t border-gray-200 pt-2 mt-2">
               <div className="flex justify-between font-semibold">
                 <span>{t('total')}:</span>
-                <span>{formatCurrency(order.totalAmount)}</span>
+                <span>{formatCurrency(order.total_amount)}</span>
               </div>
             </div>
           </div>
@@ -384,7 +391,7 @@ const CustomerOrderDetail = () => {
   );
 };
 
-// Helper icon components to avoid importing the full lucide-react library
+// Helper icon components
 const CheckIcon = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <polyline points="20 6 9 17 4 12"></polyline>

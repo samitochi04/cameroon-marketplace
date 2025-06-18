@@ -1,11 +1,11 @@
 const supabase = require(`../supabase/supabaseClient`);
-const { createCinetpayPayment } = require('../services/cinetpayService');
+const { createCampayPayment } = require('../services/campayService');
 
 exports.createOrder = async (req, res) => {
     try {
         console.log('Received order data:', req.body);
         
-        // Extract required fields and provide defaults for missing ones
+        // Extract required fields
         const { 
             userId, 
             items, 
@@ -15,8 +15,7 @@ exports.createOrder = async (req, res) => {
             paymentMethod,
             subtotal = 0,
             shipping = 0,
-            totalAmount,
-            promoCode
+            totalAmount
         } = req.body;
         
         // Basic validation
@@ -33,9 +32,56 @@ exports.createOrder = async (req, res) => {
                 message: 'Shipping address is required' 
             });
         }
+
+        if (!userId) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'User ID is required' 
+            });
+        }
+        
+        // Get user profile to check if they are a vendor
+        const { data: userProfile, error: userError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', userId)
+            .single();
+            
+        if (userError) {
+            console.error('Error fetching user profile:', userError);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to verify user information'
+            });
+        }
+        
+        // Check if vendor is trying to buy their own products
+        if (userProfile.role === 'vendor') {
+            const ownProducts = items.filter(item => item.vendor_id === userId);
+            if (ownProducts.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Vendors cannot purchase their own products'
+                });
+            }
+        }
+        
+        // Validate that all items have vendor_id
+        for (const item of items) {
+            if (!item.vendor_id) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'All items must have a vendor_id'
+                });
+            }
+        }
         
         // Calculate total if not provided
         const total = totalAmount || subtotal + shipping;
+        
+        // For development: simulate successful payment
+        const paymentStatus = paymentMethod === 'simulated_payment' ? 'completed' : 'pending';
+        const orderStatus = paymentMethod === 'simulated_payment' ? 'pending' : 'pending';
         
         // Create the order in database
         const { data: order, error } = await supabase
@@ -45,12 +91,14 @@ exports.createOrder = async (req, res) => {
                 shipping_address: shippingAddress,
                 billing_address: billingAddress || shippingAddress,
                 shipping_method: shippingMethod || 'standard',
-                payment_method: paymentMethod || 'mtn_mobile_money',
-                subtotal,
-                shipping_fee: shipping,
-                total_amount: total,
-                status: 'pending',
-                payment_status: 'pending'
+                payment_method: paymentMethod || 'simulated_payment',
+                subtotal: Number(subtotal),
+                shipping_fee: Number(shipping),
+                total_amount: Number(total),
+                status: orderStatus,
+                payment_status: paymentStatus,
+                payment_intent_id: paymentMethod === 'simulated_payment' ? `sim_${Date.now()}` : null,
+                notes: paymentMethod === 'simulated_payment' ? 'Development order - simulated payment' : null
             }])
             .select()
             .single();
@@ -64,101 +112,126 @@ exports.createOrder = async (req, res) => {
             });
         }
 
-        // 2️⃣ Insert each order item with the new order ID
-        const orderItems = items.map(item => {
-            if (!item.vendor_id) {
-                throw new Error('Each order item must have a vendor_id');
-            }
-            return {
-                order_id: order.id,
-                product_id: item.productId || item.id,
-                vendor_id: item.vendor_id, 
-                quantity: item.quantity,
-                price: item.price,
-                total: item.quantity * item.price,
-                status: 'pending'
-            };
-        });
+        console.log('Created order:', order);
 
-        const { error: itemsError } = await supabase
+        // Insert order items
+        const orderItems = items.map(item => ({
+            order_id: order.id,
+            product_id: item.productId,
+            vendor_id: item.vendor_id,
+            quantity: Number(item.quantity),
+            price: Number(item.price),
+            total: Number(item.total),
+            status: 'pending'
+        }));
+
+        const { data: createdItems, error: itemsError } = await supabase
             .from('order_items')
-            .insert(orderItems);
+            .insert(orderItems)
+            .select();
 
         if (itemsError) {
             console.error('Order items save error:', itemsError);
+            
+            // Try to rollback the order if items creation failed
+            await supabase
+                .from('orders')
+                .delete()
+                .eq('id', order.id);
+                
             return res.status(500).json({
                 success: false,
-                message: 'Failed to save order items. Each item must have a vendor_id.',
+                message: 'Failed to save order items',
                 error: itemsError.message
             });
         }
+
+        console.log('Created order items:', createdItems);
         
-        // Return success without waiting for payment URL
-        res.status(200).json({ 
+        // Return success with the complete order
+        return res.status(200).json({ 
             success: true, 
             message: 'Order created successfully',
-            order
-        });
-        
-        // Optionally initiate payment asynchronously
-        try {
-            if (paymentMethod && paymentMethod !== 'cod') {
-                const paymentData = await createCinetpayPayment({
-                    transaction_id: order.id.toString(),
-                    amount: total,
-                    customer_name: shippingAddress.fullName || 'Customer',
-                    customer_email: 'customer@example.com', // This should come from user data
-                    customer_phone_number: shippingAddress.phoneNumber || ''
-                });
-                
-                // Update order with payment reference if payment was initiated
-                if (paymentData && paymentData.payment_token) {
-                    await supabase
-                        .from('orders')
-                        .update({ payment_reference: paymentData.payment_token })
-                        .eq('id', order.id);
-                }
+            order: {
+                ...order,
+                items: createdItems
             }
-        } catch (paymentError) {
-            console.error('Payment initiation error:', paymentError);
-            // We don't send an error response here since the order was already created
-            // and we've already sent the success response
-        }
+        });
         
     } catch (err) {
         console.error('Order creation error:', err);
-        // Only send error response if we haven't already sent a response
-        if (!res.headersSent) {
-            return res.status(500).json({ 
-                success: false, 
-                message: 'An unexpected error occurred', 
-                error: err.message 
-            });
-        }
+        return res.status(500).json({ 
+            success: false, 
+            message: 'An unexpected error occurred', 
+            error: err.message 
+        });
     }
 };
 
-// Get order by ID
+// Get order by ID with items
 exports.getOrderById = async (req, res) => {
     try {
         const { id } = req.params;
         
-        const { data: order, error } = await supabase
+        // Fetch order
+        const { data: order, error: orderError } = await supabase
             .from('orders')
             .select('*')
             .eq('id', id)
             .single();
             
-        if (error) {
+        if (orderError) {
             return res.status(404).json({
                 success: false,
                 message: 'Order not found'
             });
         }
+
+        // Fetch order items with product details
+        const { data: orderItems, error: itemsError } = await supabase
+            .from('order_items')
+            .select(`
+                *,
+                products (
+                    id,
+                    name,
+                    images
+                )
+            `)
+            .eq('order_id', id);
+
+        if (itemsError) {
+            console.error('Error fetching order items:', itemsError);
+        }
+
+        // Process items to include image URLs
+        const processedItems = (orderItems || []).map(item => {
+            let imageArray = [];
+            try {
+                if (item.products?.images) {
+                    if (typeof item.products.images === 'string') {
+                        imageArray = JSON.parse(item.products.images);
+                    } else if (Array.isArray(item.products.images)) {
+                        imageArray = item.products.images;
+                    }
+                }
+            } catch (e) {
+                console.warn("Error parsing product images:", e);
+            }
+            
+            return {
+                ...item,
+                name: item.products?.name || 'Product',
+                image: imageArray.length > 0 ? imageArray[0] : '/product-placeholder.jpg'
+            };
+        });
         
         return res.status(200).json({
             success: true,
-            order
+            order: {
+                ...order,
+                items: processedItems
+            }
         });
         
     } catch (err) {
@@ -166,6 +239,40 @@ exports.getOrderById = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Failed to fetch order',
+            error: err.message
+        });
+    }
+};
+
+// Get orders by user ID
+exports.getOrdersByUserId = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        const { data: orders, error } = await supabase
+            .from('orders')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+            
+        if (error) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to fetch orders',
+                error: error.message
+            });
+        }
+        
+        return res.status(200).json({
+            success: true,
+            orders: orders || []
+        });
+        
+    } catch (err) {
+        console.error('Error fetching user orders:', err);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to fetch orders',
             error: err.message
         });
     }

@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Loader, AlertCircle, CreditCard, Smartphone, SmartphoneNfc } from 'lucide-react';
+import { Loader, AlertCircle, Smartphone, SmartphoneNfc } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { orderService } from '../services/orderService';
 import { Button } from '@/components/ui/Button';
-import { CinetpayCheckout } from '@/components/payment/CinetpayCheckout';
+import { CampayCheckout } from '@/components/payment/CampayCheckout';
 import { Input } from '@/components/ui/Input';
-import axios from 'axios';
 
 const PaymentPage = () => {
   const { t } = useTranslation();
@@ -20,10 +19,6 @@ const PaymentPage = () => {
   const [paymentInitiated, setPaymentInitiated] = useState(false);
   const [paymentInfo, setPaymentInfo] = useState({
     mobileNumber: '',
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
-    cardholderName: '',
   });
   
   // Get selected payment method from localStorage or default to 'mtn_mobile_money'
@@ -41,16 +36,32 @@ const PaymentPage = () => {
   };
 
   useEffect(() => {
-    // Fetch order details
+    // Fetch order details or use pending order data
     const fetchOrder = async () => {
       try {
         setLoading(true);
-        const orderData = await orderService.getOrderById(orderId);
-        setOrder(orderData);
         
-        // Set payment method from order if available
-        if (orderData && orderData.paymentMethod) {
-          setSelectedPaymentMethod(orderData.paymentMethod);
+        // Try to get pending order from localStorage first
+        const pendingOrder = localStorage.getItem('pendingOrder');
+        if (pendingOrder) {
+          const orderData = JSON.parse(pendingOrder);
+          setOrder({
+            id: orderId,
+            totalAmount: orderData.amount,
+            paymentMethod: selectedPaymentMethod
+          });
+          
+          // Pre-fill phone number if available
+          if (orderData.customer?.phone) {
+            setPaymentInfo(prev => ({
+              ...prev,
+              mobileNumber: orderData.customer.phone.replace('237', '')
+            }));
+          }
+        } else {
+          // Fallback to API call
+          const orderData = await orderService.getOrderById(orderId);
+          setOrder(orderData);
         }
       } catch (err) {
         console.error('Failed to fetch order:', err);
@@ -63,7 +74,7 @@ const PaymentPage = () => {
     if (orderId) {
       fetchOrder();
     }
-  }, [orderId, t]);
+  }, [orderId, t, selectedPaymentMethod]);
 
   const getPaymentMethodIcon = (method) => {
     switch(method) {
@@ -71,10 +82,8 @@ const PaymentPage = () => {
         return <SmartphoneNfc className="h-6 w-6" />;
       case 'orange_money':
         return <Smartphone className="h-6 w-6" />;
-      case 'credit_card':
-        return <CreditCard className="h-6 w-6" />;
       default:
-        return <CreditCard className="h-6 w-6" />;
+        return <Smartphone className="h-6 w-6" />;
     }
   };
   
@@ -84,30 +93,16 @@ const PaymentPage = () => {
         return 'MTN Mobile Money';
       case 'orange_money':
         return 'Orange Money';
-      case 'credit_card':
-        return t('credit_card');
       default:
         return method;
     }
   };
 
   // After payment is successful
-  const handlePaymentSuccess = async () => {
-    // Retrieve order data from localStorage
-    const pendingOrder = JSON.parse(localStorage.getItem('pendingOrder'));
-    if (pendingOrder) {
-      try {
-        // Send order to backend with status "pending"
-        await axios.post(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/orders`,
-          { ...pendingOrder, status: 'pending' }
-        );
-        // Clear pending order from storage
-        localStorage.removeItem('pendingOrder');
-      } catch (err) {
-        // Optionally handle error (show message, etc)
-      }
-    }
+  const handlePaymentSuccess = async (paymentData) => {
+    // Clear pending order from storage
+    localStorage.removeItem('pendingOrder');
+    
     // Redirect to order confirmation
     navigate(`/order-confirmation/${orderId}`);
   };
@@ -119,47 +114,31 @@ const PaymentPage = () => {
   
   // Validate payment information before proceeding
   const validatePaymentInfo = () => {
-    if (selectedPaymentMethod === 'mtn_mobile_money' || selectedPaymentMethod === 'orange_money') {
-      if (!paymentInfo.mobileNumber || paymentInfo.mobileNumber.length < 9) {
-        return t('enter_valid_phone_number');
-      }
-    } else if (selectedPaymentMethod === 'credit_card') {
-      if (!paymentInfo.cardNumber || paymentInfo.cardNumber.length < 16) {
-        return t('enter_valid_card_number');
-      }
-      if (!paymentInfo.expiryDate) {
-        return t('enter_valid_expiry_date');
-      }
-      if (!paymentInfo.cvv || paymentInfo.cvv.length < 3) {
-        return t('enter_valid_cvv');
-      }
-      if (!paymentInfo.cardholderName) {
-        return t('enter_cardholder_name');
-      }
+    if (!paymentInfo.mobileNumber || paymentInfo.mobileNumber.length < 8) {
+      return t('enter_valid_phone_number');
     }
     return null;
   };
   
   const initiatePayment = () => {
-  const validationError = validatePaymentInfo();
-  if (validationError) {
-    setError(validationError);
-    return;
-  }
+    const validationError = validatePaymentInfo();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
 
-  if (selectedPaymentMethod === 'mtn_mobile_money' || selectedPaymentMethod === 'orange_money') {
+    // Format phone number for Campay (should start with 237)
     const raw = paymentInfo.mobileNumber.trim();
     const cleaned = raw.replace(/\D/g, ''); // remove non-digits
-    const formatted = cleaned.startsWith('237') ? `+${cleaned}` : `+237${cleaned}`;
+    const formatted = cleaned.startsWith('237') ? cleaned : `237${cleaned}`;
     
     setPaymentInfo(prev => ({
       ...prev,
       mobileNumber: formatted
     }));
-  }
 
-  setPaymentInitiated(true);
-};
+    setPaymentInitiated(true);
+  };
 
   if (loading) {
     return (
@@ -227,13 +206,13 @@ const PaymentPage = () => {
             </h3>
           </div>
           <p className="text-gray-500 mt-1">
-            {t('payment_method_description')}
+            {t('campay_payment_description', 'Pay securely using mobile money')}
           </p>
         </div>
         
         <div className="p-6">
           {paymentInitiated ? (
-            <CinetpayCheckout 
+            <CampayCheckout 
               amount={order.totalAmount}
               orderId={order.id}
               vendor_id={order.vendor_id}
@@ -244,90 +223,26 @@ const PaymentPage = () => {
             />
           ) : (
             <>
-              {(selectedPaymentMethod === 'mtn_mobile_money' || selectedPaymentMethod === 'orange_money') && (
-                <div className="space-y-4 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t('mobile_number')} <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      type="tel"
-                      name="mobileNumber"
-                      value={paymentInfo.mobileNumber}
-                      onChange={handleChange}
-                      placeholder="e.g., 6XXXXXXXX"
-                      className="w-full"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      {selectedPaymentMethod === 'mtn_mobile_money'
-                        ? t('mtn_number_hint', 'Enter your MTN number without the country code')
-                        : t('orange_number_hint', 'Enter your Orange number without the country code')}
-                    </p>
-                  </div>
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('mobile_number')} <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    type="tel"
+                    name="mobileNumber"
+                    value={paymentInfo.mobileNumber}
+                    onChange={handleChange}
+                    placeholder="e.g., 6XXXXXXXX"
+                    className="w-full"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {selectedPaymentMethod === 'mtn_mobile_money'
+                      ? t('mtn_number_hint', 'Enter your MTN number without country code (237)')
+                      : t('orange_number_hint', 'Enter your Orange number without country code (237)')}
+                  </p>
                 </div>
-              )}
-              
-              {selectedPaymentMethod === 'credit_card' && (
-                <div className="space-y-4 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t('card_number')} <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      type="text"
-                      name="cardNumber"
-                      value={paymentInfo.cardNumber}
-                      onChange={handleChange}
-                      placeholder="XXXX XXXX XXXX XXXX"
-                      className="w-full"
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t('expiry_date')} <span className="text-red-500">*</span>
-                      </label>
-                      <Input
-                        type="text"
-                        name="expiryDate"
-                        value={paymentInfo.expiryDate}
-                        onChange={handleChange}
-                        placeholder="MM/YY"
-                        className="w-full"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t('cvv')} <span className="text-red-500">*</span>
-                      </label>
-                      <Input
-                        type="text"
-                        name="cvv"
-                        value={paymentInfo.cvv}
-                        onChange={handleChange}
-                        placeholder="XXX"
-                        className="w-full"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {t('cardholder_name')} <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      type="text"
-                      name="cardholderName"
-                      value={paymentInfo.cardholderName}
-                      onChange={handleChange}
-                      placeholder={t('name_on_card')}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-              )}
+              </div>
               
               <Button
                 variant="primary"
@@ -338,7 +253,7 @@ const PaymentPage = () => {
               </Button>
               
               <p className="text-sm text-gray-500 text-center">
-                {t('secure_payment_note')}
+                {t('campay_secure_note', 'Your payment is processed securely through Campay')}
               </p>
             </>
           )}
@@ -380,3 +295,4 @@ const PaymentPage = () => {
 };
 
 export default PaymentPage;
+                      

@@ -146,51 +146,44 @@ export const CheckoutPage = () => {
       ? { ...formData.shippingAddress }
       : { ...formData.billingAddress };
 
-    // Prepare all required Cinetpay fields
-    const paymentInitPayload = {
-      amount: Math.ceil(total / 5) * 5, // <-- round UP to the next multiple of 5
-      currency: "XAF",
-      description: "PaiementDeCommande",
-      customer_id: user?.id,
-      customer_name: formData.shippingAddress.fullName,
-      customer_surname: formData.shippingAddress.fullName || '', // or split name if you have
-      customer_email: user?.email,
-      customer_phone_number: formData.shippingAddress.phoneNumber,
-      customer_address: formData.shippingAddress.address,
-      customer_city: formData.shippingAddress.city,
-      customer_country: "CM",
-      customer_state: "CM",
-      customer_zip_code: "00000",
-      notify_url: `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/webhooks/cinetpay`,
-      return_url: `${window.location.origin}/payment-success`, // or your confirmation page
-      channels: "ALL",
-      lang: "fr",
-      metadata: JSON.stringify({
-        cart: cartItems,
-        userId: user?.id
-      }),
+    // Prepare order data for backend
+    const orderData = {
+      userId: user?.id,
+      items: cartItems.map(item => ({
+        productId: item.id,
+        vendor_id: item.vendor_id,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.price * item.quantity
+      })),
+      shippingAddress: formData.shippingAddress,
+      billingAddress: billingAddress,
+      shippingMethod: shippingMethod,
+      paymentMethod: 'simulated_payment', // For development
+      subtotal: subtotal,
+      shipping: shipping || 0,
+      totalAmount: total
     };
 
     try {
-      // Log payload for debugging
-      console.log('Sending to /api/payments/initialize:', paymentInitPayload);
+      console.log('Creating order:', orderData);
 
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/payments/initialize`,
-        paymentInitPayload
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/orders`,
+        orderData
       );
-      if (response.data?.data?.paymentUrl) {
-        localStorage.setItem('pendingOrder', JSON.stringify({
-          ...paymentInitPayload,
-          cartItems,
-          shippingAddress: formData.shippingAddress,
-          billingAddress,
-        }));
-        window.location.href = response.data.data.paymentUrl;
+      
+      if (response.data?.success) {
+        // Clear cart after successful order
+        clearCart();
+        
+        // Redirect to order confirmation
+        navigate(`/order-confirmation/${response.data.order.id}`);
       } else {
-        setOrderError('Failed to initiate payment.');
+        setOrderError(response.data.message || 'Failed to create order.');
       }
     } catch (error) {
+      console.error('Order creation error:', error);
       setOrderError(error.response?.data?.message || t('failed_to_place_order'));
       window.scrollTo(0, 0);
     } finally {

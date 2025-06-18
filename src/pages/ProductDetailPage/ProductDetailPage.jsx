@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { Heart, Star, ShoppingCart, Share2, Minus, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { supabase } from "@/lib/supabase";
+import { toast } from "react-toastify";
+import { AlertCircle } from "lucide-react";
 
 export const ProductDetailPage = () => {
   const { t } = useTranslation();
   const { id } = useParams();
-  const { addToCart } = useCart();
+  const { addToCart, user } = useCart();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState("description");
@@ -166,15 +170,24 @@ export const ProductDetailPage = () => {
   }
   
   const handleAddToCart = () => {
-    addToCart({
-      id: product.id,
-      vendor_id: product.vendor_id,
-      name: product.name,
-      price: product.salePrice || product.price,
-      image: product.images[0],
-      quantity: quantity,
-      stock_quantity: product.stockQuantity
-    });
+    if (!user) {
+      // Redirect to login if not authenticated
+      navigate('/login?redirect=' + encodeURIComponent(location.pathname));
+      return;
+    }
+
+    // Check if vendor is trying to buy their own product
+    if (user.role === 'vendor' && user.id === product.vendor_id) {
+      toast.error('You cannot purchase your own products');
+      return;
+    }
+
+    if (product.stock_quantity && quantity > product.stock_quantity) {
+      toast.error(`Only ${product.stock_quantity} items available`);
+      return;
+    }
+
+    addToCart(product, quantity);
   };
   
   const decrementQuantity = () => {
@@ -202,6 +215,8 @@ export const ProductDetailPage = () => {
       prev === 0 ? product.images.length - 1 : prev - 1
     );
   };
+  
+  const isOwnProduct = user && user.role === 'vendor' && user.id === product?.vendor_id;
   
   return (
     <div className="bg-gray-50 min-h-screen">

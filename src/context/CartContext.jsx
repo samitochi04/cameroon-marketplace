@@ -71,6 +71,27 @@ export const CartProvider = ({ children }) => {
       return;
     }
 
+    // Ensure vendor_id is available
+    if (!product.vendor_id) {
+      console.error("Product missing vendor_id:", product);
+      addToast({
+        title: "Error",
+        message: "Unable to add product to cart: missing vendor information",
+        type: "error"
+      });
+      return;
+    }
+
+    // Check if current user is a vendor trying to buy their own product
+    if (user && user.role === 'vendor' && user.id === product.vendor_id) {
+      addToast({
+        title: "Cannot Add Product",
+        message: "You cannot purchase your own products",
+        type: "warning"
+      });
+      return;
+    }
+
     // Make sure we have all the required fields
     const cartProduct = {
       id: product.id,
