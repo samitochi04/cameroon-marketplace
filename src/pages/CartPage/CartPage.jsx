@@ -21,8 +21,6 @@ export const CartPage = () => {
   const { 
     cartItems, 
     subtotal, 
-    tax, 
-    shipping, 
     total, 
     isEmpty, 
     applyPromoCode, 
@@ -226,31 +224,8 @@ export const CartPage = () => {
 
               <div className="flex justify-between">
                 <span className="text-gray-600">{t("cart.shipping")}</span>
-                {shipping > 0 ? (
-                  <span>
-                    {new Intl.NumberFormat("fr-CM", {
-                      style: "currency",
-                      currency: "XAF",
-                      minimumFractionDigits: 0,
-                    }).format(shipping)}
-                  </span>
-                ) : (
-                  <span className="text-green-600">{t("cart.free")}</span>
-                )}
+                <span className="text-green-600">{t("cart.free")}</span>
               </div>
-
-              {tax > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">{t("cart.tax")}</span>
-                  <span>
-                    {new Intl.NumberFormat("fr-CM", {
-                      style: "currency",
-                      currency: "XAF",
-                      minimumFractionDigits: 0,
-                    }).format(tax)}
-                  </span>
-                </div>
-              )}
             </div>
 
             <div className="flex justify-between items-center font-bold text-lg mb-5">

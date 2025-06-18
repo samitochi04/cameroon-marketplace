@@ -71,7 +71,7 @@ const router = createBrowserRouter([
       { path: 'products', element: <ProductListPage /> },
       { path: 'categories', element: <CategoryPage /> }, // Show all categories
       { path: 'category/:slug', element: <CategoryPage /> }, // Show specific category
-      { path: 'products/:slug', element: <ProductDetailPage /> },
+      { path: 'products/:id', element: <ProductDetailPage /> }, // Changed from slug to id
       { path: 'vendors', element: <VendorsPage /> }, // Show all vendors
       { path: 'vendor/:id', element: <VendorStorePage /> }, // Show specific vendor
       { path: 'cart', element: <CartPage /> },

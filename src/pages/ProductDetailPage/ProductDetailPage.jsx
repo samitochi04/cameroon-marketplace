@@ -1,21 +1,143 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Heart, Star, ShoppingCart, Share2, Minus, Plus, ChevronLeft } from "lucide-react";
+import { Heart, Star, ShoppingCart, Share2, Minus, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useProductDetail } from "@/hooks/useProducts";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { ProductCard } from "@/components/products/ProductCard";
+import { supabase } from "@/lib/supabase";
 
 export const ProductDetailPage = () => {
   const { t } = useTranslation();
-  const { slug } = useParams();
-  const { product, loading, error, relatedProducts } = useProductDetail(slug);
-  const { addItem } = useCart();
+  const { id } = useParams();
+  const { addToCart } = useCart();
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState("description");
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  
+  // Fetch product data from Supabase
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+        
+        // First try to fetch by ID (UUID), then by slug
+        let productData = null;
+        let productError = null;
+        
+        // Check if the ID looks like a UUID
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        
+        if (isUUID) {
+          // Try fetching by ID first
+          const { data, error } = await supabase
+            .from('products')
+            .select('id, name, price, sale_price, images, stock_quantity, slug, vendor_id, status, description, category_id')
+            .eq('id', id)
+            .eq('status', 'published')
+            .single();
+          
+          productData = data;
+          productError = error;
+        } else {
+          // Try fetching by slug
+          const { data, error } = await supabase
+            .from('products')
+            .select('id, name, price, sale_price, images, stock_quantity, slug, vendor_id, status, description, category_id')
+            .eq('slug', id)
+            .eq('status', 'published')
+            .single();
+          
+          productData = data;
+          productError = error;
+        }
+
+        if (productError) throw productError;
+
+        if (productData) {
+          // Process product images - handle multiple images properly
+          let imageArray = [];
+          try {
+            if (typeof productData.images === 'string') {
+              imageArray = JSON.parse(productData.images);
+            } else if (Array.isArray(productData.images)) {
+              imageArray = productData.images;
+            }
+          } catch (e) {
+            console.warn("Error parsing product images:", e);
+          }
+          
+          // Ensure we have at least one image
+          if (!Array.isArray(imageArray) || imageArray.length === 0) {
+            imageArray = ["/product-placeholder.jpg"];
+          }
+          
+          const processedProduct = {
+            ...productData,
+            images: imageArray,
+            rating: 4.5, // Default rating
+            reviewCount: 0, // Default review count
+            stockQuantity: productData.stock_quantity,
+            salePrice: productData.sale_price,
+            shortDescription: productData.description || 'No description available',
+            sku: productData.id, // Use ID as SKU if no SKU field
+            specifications: [], // Default empty specifications
+            reviews: [] // Default empty reviews
+          };
+
+          setProduct(processedProduct);
+
+          // Fetch related products from same category
+          if (productData.category_id) {
+            const { data: relatedData } = await supabase
+              .from('products')
+              .select('id, name, price, sale_price, images, stock_quantity, slug, vendor_id, status, description, category_id')
+              .eq('category_id', productData.category_id)
+              .eq('status', 'published')
+              .neq('id', productData.id)
+              .limit(4);
+
+            if (relatedData) {
+              const processedRelated = relatedData.map(prod => {
+                let imgArray = [];
+                try {
+                  if (typeof prod.images === 'string') {
+                    imgArray = JSON.parse(prod.images);
+                  } else if (Array.isArray(prod.images)) {
+                    imgArray = prod.images;
+                  }
+                } catch (e) {}
+                
+                return {
+                  ...prod,
+                  images: imgArray.length > 0 ? imgArray : ["/product-placeholder.jpg"],
+                  stockQuantity: prod.stock_quantity,
+                  salePrice: prod.sale_price
+                };
+              });
+              setRelatedProducts(processedRelated);
+            }
+          }
+        } else {
+          setError("Product not found");
+        }
+
+      } catch (err) {
+        console.error("Error fetching product:", err);
+        setError(err.message || "Failed to fetch product");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchProduct();
+    }
+  }, [id]);
   
   useEffect(() => {
     // Reset selected image and quantity when product changes
@@ -44,7 +166,15 @@ export const ProductDetailPage = () => {
   }
   
   const handleAddToCart = () => {
-    addItem(product, quantity);
+    addToCart({
+      id: product.id,
+      vendor_id: product.vendor_id,
+      name: product.name,
+      price: product.salePrice || product.price,
+      image: product.images[0],
+      quantity: quantity,
+      stock_quantity: product.stockQuantity
+    });
   };
   
   const decrementQuantity = () => {
@@ -58,6 +188,20 @@ export const ProductDetailPage = () => {
       setQuantity(quantity + 1);
     }
   };
+
+  // Navigate to next image
+  const nextImage = () => {
+    setSelectedImage((prev) => 
+      prev === product.images.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  // Navigate to previous image
+  const prevImage = () => {
+    setSelectedImage((prev) => 
+      prev === 0 ? product.images.length - 1 : prev - 1
+    );
+  };
   
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -65,15 +209,11 @@ export const ProductDetailPage = () => {
         {/* Breadcrumbs */}
         <div className="flex items-center text-sm text-gray-500 mb-6">
           <Link to="/" className="hover:text-primary">
-            {t("home")}
+            {t("common.home")}
           </Link>
           <span className="mx-2">›</span>
           <Link to="/products" className="hover:text-primary">
-            {t("products")}
-          </Link>
-          <span className="mx-2">›</span>
-          <Link to={`/category/${product.category.slug}`} className="hover:text-primary">
-            {product.category.name}
+            {t("common.products")}
           </Link>
           <span className="mx-2">›</span>
           <span className="truncate max-w-[200px]">{product.name}</span>
@@ -95,42 +235,75 @@ export const ProductDetailPage = () => {
 
         <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 p-4 md:p-8">
-            {/* Product Images - Left Column on desktop, Top on mobile */}
+            {/* Product Images - Left Column */}
             <div className="lg:col-span-3">
               <div className="flex flex-col md:flex-row gap-4">
-                {/* Thumbnails - Horizontal on mobile, Vertical on desktop */}
-                <div className="order-2 md:order-1 md:w-20 flex md:flex-col gap-2 overflow-auto">
-                  {product.images?.map((image, index) => (
-                    <div
-                      key={index}
-                      className={`
-                        border-2 rounded cursor-pointer flex-shrink-0 w-16 h-16
-                        ${selectedImage === index ? 'border-primary' : 'border-transparent'}
-                      `}
-                      onClick={() => setSelectedImage(index)}
-                    >
-                      <img
-                        src={image}
-                        alt={`${product.name} - view ${index + 1}`}
-                        className="w-full h-full object-cover rounded"
-                      />
-                    </div>
-                  ))}
-                </div>
+                {/* Thumbnails - Show only if more than one image */}
+                {product.images.length > 1 && (
+                  <div className="order-2 md:order-1 md:w-20 flex md:flex-col gap-2 overflow-auto">
+                    {product.images.map((image, index) => (
+                      <div
+                        key={index}
+                        className={`
+                          border-2 rounded cursor-pointer flex-shrink-0 w-16 h-16
+                          ${selectedImage === index ? 'border-primary' : 'border-transparent'}
+                        `}
+                        onClick={() => setSelectedImage(index)}
+                      >
+                        <img
+                          src={image}
+                          alt={`${product.name} - view ${index + 1}`}
+                          className="w-full h-full object-cover rounded"
+                          onError={(e) => {
+                            e.target.src = "/product-placeholder.jpg";
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
                 
                 {/* Main Image */}
                 <div className="order-1 md:order-2 flex-grow">
                   <div className="relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
-                    {product.images?.length > 0 ? (
-                      <img
-                        src={product.images[selectedImage]}
-                        alt={product.name}
-                        className="w-full h-full object-contain"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-gray-400">
-                        {t("no_image_available")}
-                      </div>
+                    <img
+                      src={product.images[selectedImage]}
+                      alt={product.name}
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        e.target.src = "/product-placeholder.jpg";
+                      }}
+                    />
+                    
+                    {/* Navigation arrows - Show only if more than one image */}
+                    {product.images.length > 1 && (
+                      <>
+                        <button
+                          onClick={prevImage}
+                          className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-md transition-all"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={nextImage}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-md transition-all"
+                        >
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+                        
+                        {/* Image indicator dots */}
+                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                          {product.images.map((_, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setSelectedImage(index)}
+                              className={`w-2 h-2 rounded-full transition-all ${
+                                selectedImage === index ? 'bg-primary' : 'bg-white/60'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -140,14 +313,6 @@ export const ProductDetailPage = () => {
             {/* Product Info - Right Column */}
             <div className="lg:col-span-2">
               <div className="flex flex-col h-full">
-                {/* Product Vendor */}
-                <Link
-                  to={`/vendor/${product.vendor.id}`}
-                  className="text-sm text-primary hover:underline mb-2"
-                >
-                  {product.vendor.name}
-                </Link>
-                
                 {/* Product Name */}
                 <h1 className="text-xl md:text-2xl lg:text-3xl font-bold mb-2">
                   {product.name}
@@ -177,10 +342,18 @@ export const ProductDetailPage = () => {
                   {product.salePrice ? (
                     <div className="flex items-center">
                       <span className="text-2xl font-bold text-primary">
-                        ${product.salePrice.toFixed(2)}
+                        {new Intl.NumberFormat('fr-CM', {
+                          style: 'currency',
+                          currency: 'XAF',
+                          minimumFractionDigits: 0
+                        }).format(product.salePrice)}
                       </span>
                       <span className="ml-2 text-gray-500 line-through">
-                        ${product.price.toFixed(2)}
+                        {new Intl.NumberFormat('fr-CM', {
+                          style: 'currency',
+                          currency: 'XAF',
+                          minimumFractionDigits: 0
+                        }).format(product.price)}
                       </span>
                       <Badge variant="danger" className="ml-2">
                         {Math.round(((product.price - product.salePrice) / product.price) * 100)}% {t("off")}
@@ -188,7 +361,11 @@ export const ProductDetailPage = () => {
                     </div>
                   ) : (
                     <span className="text-2xl font-bold text-primary">
-                      ${product.price.toFixed(2)}
+                      {new Intl.NumberFormat('fr-CM', {
+                        style: 'currency',
+                        currency: 'XAF',
+                        minimumFractionDigits: 0
+                      }).format(product.price)}
                     </span>
                   )}
                 </div>
@@ -198,18 +375,18 @@ export const ProductDetailPage = () => {
                   {product.stockQuantity > 0 ? (
                     <Badge variant="success">
                       {product.stockQuantity > 10
-                        ? t("in_stock")
+                        ? t("common.in_stock")
                         : t("only_x_left", { count: product.stockQuantity })}
                     </Badge>
                   ) : (
-                    <Badge variant="danger">{t("out_of_stock")}</Badge>
+                    <Badge variant="danger">{t("common.out_of_stock")}</Badge>
                   )}
                 </div>
                 
                 {/* Quantity Selector */}
                 {product.stockQuantity > 0 && (
                   <div className="flex items-center mb-6">
-                    <span className="text-sm font-medium mr-4">{t("quantity")}:</span>
+                    <span className="text-sm font-medium mr-4">{t("common.quantity")}:</span>
                     <div className="flex border border-gray-300 rounded-md">
                       <button
                         type="button"
@@ -254,7 +431,7 @@ export const ProductDetailPage = () => {
                     onClick={handleAddToCart}
                     leftIcon={ShoppingCart}
                   >
-                    {t("add_to_cart")}
+                    {t("common.add_to_cart")}
                   </Button>
                   <Button variant="outline" size="lg" className="flex items-center justify-center">
                     <Heart className="w-5 h-5" />
@@ -264,7 +441,7 @@ export const ProductDetailPage = () => {
                   </Button>
                 </div>
                 
-                {/* Short Description */}
+                {/* Description */}
                 <p className="text-gray-600 mb-4">
                   {product.shortDescription}
                 </p>
@@ -273,12 +450,6 @@ export const ProductDetailPage = () => {
                 <div className="text-sm text-gray-600">
                   <p className="mb-1">
                     <span className="font-medium">{t("sku")}:</span> {product.sku}
-                  </p>
-                  <p className="mb-1">
-                    <span className="font-medium">{t("category")}:</span>{" "}
-                    <Link to={`/category/${product.category.slug}`} className="hover:underline">
-                      {product.category.name}
-                    </Link>
                   </p>
                 </div>
               </div>
@@ -290,7 +461,7 @@ export const ProductDetailPage = () => {
         <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-12">
           <div className="border-b border-gray-200">
             <nav className="flex flex-wrap -mb-px">
-              {["description", "specifications", "reviews"].map((tab) => (
+              {["description"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -313,68 +484,9 @@ export const ProductDetailPage = () => {
             {activeTab === "description" && (
               <div>
                 <h3 className="text-lg font-medium mb-4">{t("product_description")}</h3>
-                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: product.description }} />
-              </div>
-            )}
-            
-            {activeTab === "specifications" && (
-              <div>
-                <h3 className="text-lg font-medium mb-4">{t("specifications")}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
-                  {product.specifications?.map((spec, index) => (
-                    <div key={index} className="py-2 border-b border-gray-100 flex">
-                      <span className="font-medium w-1/3">{spec.name}:</span>
-                      <span className="text-gray-600 w-2/3">{spec.value}</span>
-                    </div>
-                  ))}
+                <div className="prose max-w-none">
+                  <p>{product.description}</p>
                 </div>
-              </div>
-            )}
-            
-            {activeTab === "reviews" && (
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-lg font-medium">{t("customer_reviews")}</h3>
-                  <Button variant="outline" size="sm">
-                    {t("write_review")}
-                  </Button>
-                </div>
-                
-                {product.reviews?.length > 0 ? (
-                  <div className="space-y-6">
-                    {product.reviews.map((review, index) => (
-                      <div key={index} className="border-b border-gray-100 pb-6 last:border-b-0">
-                        <div className="flex justify-between mb-2">
-                          <div>
-                            <h4 className="font-medium">{review.userName}</h4>
-                            <div className="flex items-center text-sm text-gray-500">
-                              <div className="flex">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`w-3 h-3 ${
-                                      i < Math.floor(review.rating)
-                                        ? "fill-yellow-400 text-yellow-400"
-                                        : "fill-none text-gray-300"
-                                    }`}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                          <span className="text-sm text-gray-500">
-                            {new Date(review.date).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <p className="text-gray-600">{review.comment}</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 text-center py-8">
-                    {t("no_reviews_yet")}
-                  </p>
-                )}
               </div>
             )}
           </div>
@@ -388,17 +500,52 @@ export const ProductDetailPage = () => {
             </div>
             
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {relatedProducts.slice(0, 4).map((product) => (
-                <ProductCard
-                  key={product.id}
-                  id={product.id}
-                  name={product.name}
-                  price={product.price}
-                  salePrice={product.salePrice}
-                  imageUrl={product.images?.[0]}
-                  onAddToCart={() => addItem(product, 1)}
-                  onAddToWishlist={() => {}}
-                />
+              {relatedProducts.map((relatedProduct) => (
+                <div key={relatedProduct.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
+                  <Link to={`/products/${relatedProduct.id}`}>
+                    <img 
+                      src={relatedProduct.images[0]} 
+                      alt={relatedProduct.name} 
+                      className="w-full h-48 object-cover"
+                      onError={(e) => {
+                        e.target.src = "/product-placeholder.jpg";
+                      }}
+                    />
+                  </Link>
+                  <div className="p-4">
+                    <h3 className="font-medium mb-1 truncate">
+                      <Link to={`/products/${relatedProduct.id}`} className="hover:text-primary">
+                        {relatedProduct.name}
+                      </Link>
+                    </h3>
+                    <div className="text-primary font-semibold">
+                      {relatedProduct.salePrice ? (
+                        <>
+                          <span>
+                            {new Intl.NumberFormat('fr-CM', {
+                              style: 'currency',
+                              currency: 'XAF',
+                              minimumFractionDigits: 0
+                            }).format(relatedProduct.salePrice)}
+                          </span>
+                          <span className="text-gray-500 text-sm line-through ml-2">
+                            {new Intl.NumberFormat('fr-CM', {
+                              style: 'currency',
+                              currency: 'XAF',
+                              minimumFractionDigits: 0
+                            }).format(relatedProduct.price)}
+                          </span>
+                        </>
+                      ) : (
+                        new Intl.NumberFormat('fr-CM', {
+                          style: 'currency',
+                          currency: 'XAF',
+                          minimumFractionDigits: 0
+                        }).format(relatedProduct.price)
+                      )}
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -407,3 +554,5 @@ export const ProductDetailPage = () => {
     </div>
   );
 };
+
+export default ProductDetailPage;

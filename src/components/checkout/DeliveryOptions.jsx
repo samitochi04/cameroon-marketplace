@@ -9,14 +9,14 @@ export const DeliveryOptions = ({ selectedMethod, onSelectMethod }) => {
     {
       id: 'standard',
       name: t('standard_shipping'),
-      price: 2000,
+      price: 0,
       description: t('delivery_time_standard', { days: '3-5' }),
       icon: <Truck className="h-5 w-5" />
     },
     {
       id: 'express',
       name: t('express_shipping'),
-      price: 5000,
+      price: 0,
       description: t('delivery_time_express', { days: '1-2' }),
       icon: <Home className="h-5 w-5" /> 
     },
@@ -50,15 +50,15 @@ export const DeliveryOptions = ({ selectedMethod, onSelectMethod }) => {
               <div className="ml-3 flex-1">
                 <div className="flex justify-between">
                   <span className="font-medium">{method.name}</span>
-                  <span className="font-semibold">{
-                    method.price > 0 
-                    ? new Intl.NumberFormat('fr-CM', {
-                        style: 'currency',
-                        currency: 'XAF',
-                        minimumFractionDigits: 0
-                      }).format(method.price)
-                    : t('free')
-                  }</span>
+                  <span className="font-semibold">
+                    {method.price > 0 
+                      ? new Intl.NumberFormat('fr-CM', {
+                          style: 'currency',
+                          currency: 'XAF',
+                          minimumFractionDigits: 0
+                        }).format(method.price)
+                      : t('free')}
+                  </span>
                 </div>
                 <p className="text-sm text-gray-500">{method.description}</p>
               </div>

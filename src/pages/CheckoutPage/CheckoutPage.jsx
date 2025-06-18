@@ -12,25 +12,24 @@ import { ShippingMethod } from '@/components/checkout/ShippingMethod/ShippingMet
 import { CheckoutSteps } from '@/components/checkout/CheckoutSteps/CheckoutSteps';
 import { AddressForm } from '@/components/checkout/AddressForm/AddressForm';
 import { OrderReview } from '@/components/checkout/OrderReview/OrderReview';
-import { PaymentMethod } from '@/components/checkout/PaymentMethod/PaymentMethod';
+// import { PaymentMethod } from '@/components/checkout/PaymentMethod/PaymentMethod';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 
-const STEPS = ['address', 'shipping', 'review', 'payment'];
-
-// Define shipping method prices
 const SHIPPING_PRICES = {
-  standard: 2000,
-  express: 5000,
+  standard: 0,
+  express: 0,
   pickup: 0
 };
+
+const STEPS = ['address', 'shipping', 'review']; // Remove 'payment'
 
 export const CheckoutPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [shippingMethod, setShippingMethod] = useState('standard');
-  const [paymentMethod, setPaymentMethod] = useState('mtn_mobile_money');
+  // const [paymentMethod, setPaymentMethod] = useState('mtn_mobile_money');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderError, setOrderError] = useState(null);
   const [shippingCost, setShippingCost] = useState(SHIPPING_PRICES.standard); // Default shipping cost
@@ -128,79 +127,71 @@ export const CheckoutPage = () => {
     // Update shipping cost based on selected method
     const newShippingCost = SHIPPING_PRICES[method] || 0;
     setShippingCost(newShippingCost);
-    
+
     // Update shipping cost in cart context
     if (typeof updateShipping === 'function') {
       updateShipping(newShippingCost);
     }
   };
 
-  const handlePaymentMethodChange = (method) => {
-    setPaymentMethod(method);
-  };
+  // Remove handlePaymentMethodChange and PaymentMethod logic
 
-  const handlePlaceOrder = async () => {
+  // This function is called when the user clicks "Pay" on the review step
+  const handlePay = async () => {
+    setIsSubmitting(true);
+    setOrderError(null);
+
+    const formData = methods.getValues();
+    const billingAddress = formData.billingAddress.sameAsShipping
+      ? { ...formData.shippingAddress }
+      : { ...formData.billingAddress };
+
+    // Prepare all required Cinetpay fields
+    const paymentInitPayload = {
+      amount: Math.ceil(total / 5) * 5, // <-- round UP to the next multiple of 5
+      currency: "XAF",
+      description: "PaiementDeCommande",
+      customer_id: user?.id,
+      customer_name: formData.shippingAddress.fullName,
+      customer_surname: formData.shippingAddress.fullName || '', // or split name if you have
+      customer_email: user?.email,
+      customer_phone_number: formData.shippingAddress.phoneNumber,
+      customer_address: formData.shippingAddress.address,
+      customer_city: formData.shippingAddress.city,
+      customer_country: "CM",
+      customer_state: "CM",
+      customer_zip_code: "00000",
+      notify_url: `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/webhooks/cinetpay`,
+      return_url: `${window.location.origin}/payment-success`, // or your confirmation page
+      channels: "ALL",
+      lang: "fr",
+      metadata: JSON.stringify({
+        cart: cartItems,
+        userId: user?.id
+      }),
+    };
+
     try {
-      setIsSubmitting(true);
-      setOrderError(null);
+      // Log payload for debugging
+      console.log('Sending to /api/payments/initialize:', paymentInitPayload);
 
-      const formData = methods.getValues();
-
-      // Extract billing address based on sameAsShipping flag
-      const billingAddress = formData.billingAddress.sameAsShipping
-        ? { ...formData.shippingAddress }
-        : { ...formData.billingAddress };
-
-      // Prepare order data
-      const orderData = {
-        userId: user?.id,
-        items: cartItems.map(item => ({
-          productId: item.id,
-          vendor_id: item.vendor_id,
-          quantity: item.quantity,
-          price: item.price,
-        })),
-        shippingAddress: formData.shippingAddress,
-        billingAddress,
-        shippingMethod,
-        paymentMethod,
-        subtotal,
-        shipping: shippingCost,
-        totalAmount: total,
-        promoCode: appliedPromo ? appliedPromo.code : null,
-      };
-
-      // Get auth token if available
-      let headers = {};
-      if (getToken) {
-        const token = await getToken();
-        if (token) {
-          headers.Authorization = `Bearer ${token}`;
-        }
-      }
-
-      // Send order to the API using axios directly
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/orders`, 
-        orderData,
-        { headers }
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/payments/initialize`,
+        paymentInitPayload
       );
-      
-      // Handle payment initiation for all payment methods
-      if (['mtn_mobile_money', 'orange_money', 'credit_card'].includes(paymentMethod)) {
-        // First, clear the cart
-        clearCart();
-        // Store payment method in localStorage for the payment page to use
-        localStorage.setItem('selectedPaymentMethod', paymentMethod);
-        // Redirect to payment page with order ID
-        navigate(`/payment/${response.data.order.id}`);
+      if (response.data?.data?.paymentUrl) {
+        localStorage.setItem('pendingOrder', JSON.stringify({
+          ...paymentInitPayload,
+          cartItems,
+          shippingAddress: formData.shippingAddress,
+          billingAddress,
+        }));
+        window.location.href = response.data.data.paymentUrl;
+      } else {
+        setOrderError('Failed to initiate payment.');
       }
     } catch (error) {
-      console.error('Error placing order:', error);
-      setOrderError(
-        error.response?.data?.message || t('failed_to_place_order')
-      );
-      // Scroll to error message
+      setOrderError(error.response?.data?.message || t('failed_to_place_order'));
       window.scrollTo(0, 0);
     } finally {
       setIsSubmitting(false);
@@ -216,8 +207,6 @@ export const CheckoutPage = () => {
         return !!shippingMethod;
       case 2: // Review step
         return true;
-      case 3: // Payment step
-        return !!paymentMethod;
       default:
         return false;
     }
@@ -245,14 +234,6 @@ export const CheckoutPage = () => {
                 : methods.getValues('billingAddress')
             }
             shippingMethod={shippingMethod}
-          />
-        );
-      case 3:
-        return (
-          <PaymentMethod 
-            selectedMethod={paymentMethod}
-            onSelectMethod={handlePaymentMethodChange}
-            total={total}
           />
         );
       default:
@@ -285,8 +266,7 @@ export const CheckoutPage = () => {
         steps={[
           t('address'),
           t('shipping'),
-          t('review'),
-          t('payment')
+          t('review')
         ]} 
         currentStep={currentStep} 
       />
@@ -322,12 +302,12 @@ export const CheckoutPage = () => {
                 ) : (
                   <Button 
                     variant="primary"
-                    onClick={handlePlaceOrder}
+                    onClick={handlePay}
                     disabled={isSubmitting || !canProceed()}
                     isLoading={isSubmitting}
                     className="ml-auto"
                   >
-                    {t('place_order')}
+                    {t('pay')}
                   </Button>
                 )}
               </div>
@@ -378,11 +358,7 @@ export const CheckoutPage = () => {
               
               <div className="flex justify-between">
                 <span>{t('shipping')}</span>
-                <span>
-                  {shippingCost > 0 
-                    ? formatCurrency(shippingCost)
-                    : t('free')}
-                </span>
+                <span className="text-green-600">{t('free')}</span>
                 
                 {/* Show shipping method name if selected */}
                 {shippingMethod && (

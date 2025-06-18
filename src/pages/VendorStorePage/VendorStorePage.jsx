@@ -2,97 +2,234 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Star, MapPin, Phone, Mail, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useApi } from "@/hooks/useApi";
-import { useProducts } from "@/hooks/useProducts";
 import { Button } from "@/components/ui/Button";
-import { ProductGrid } from "@/components/products/ProductGrid";
-import { Pagination } from "@/components/common/Pagination";
 import { Badge } from "@/components/ui/Badge";
-import { Select } from "@/components/ui/Select";
+import { supabase } from "@/lib/supabase";
+import { useCart } from "@/context/CartContext";
 
 export const VendorStorePage = () => {
   const { t } = useTranslation();
   const { id } = useParams();
+  const { addToCart } = useCart();
   const [activeTab, setActiveTab] = useState("products");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("newest");
   const [category, setCategory] = useState("");
   
-  // Fix the import - replace useGet with useApi
-  const { get, loading: apiLoading } = useApi();
+  // State for vendor and products data
+  const [vendor, setVendor] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [error, setError] = useState(null);
   
-  // Fetch vendor data
-  const {
-    data: vendorData,
-    loading: vendorLoading,
-    error: vendorError,
-    fetchData: fetchVendor,
-  } = useGet(`/api/vendors/${id}`);
-  
-  // Fetch vendor products
-  const { products, loading: productsLoading, error: productsError, pagination } = useProducts({
-    vendorId: id,
-    page: currentPage,
-    pageSize: 12,
-    sort: sortBy,
-    category: category || undefined,
-  });
-  
-  // Fetch vendor categories (products categories this vendor sells)
-  const {
-    data: categoriesData,
-    loading: categoriesLoading,
-  } = useGet(`/api/vendors/${id}/categories`);
-  
+  // Fetch vendor data from Supabase
   useEffect(() => {
-    fetchVendor();
-  }, [id, fetchVendor]);
-  
-  const handleSortChange = (e) => {
-    setSortBy(e.target.value);
+    const fetchVendor = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch vendor data - exactly like HomePage.jsx
+        const { data: vendorData, error: vendorError } = await supabase
+          .from('vendors')
+          .select('id, store_name, description, banner_url, logo_url, store_city, store_country, created_at, status')
+          .eq('id', id)
+          .eq('status', 'approved')
+          .single();
+
+        if (vendorError) {
+          console.error("Vendor fetch error:", vendorError);
+          throw vendorError;
+        }
+
+        if (vendorData) {
+          // Process vendor data exactly like HomePage.jsx
+          setVendor({
+            id: vendorData.id,
+            storeName: vendorData.store_name,
+            description: vendorData.description || 'Quality products from a trusted vendor',
+            logoUrl: vendorData.logo_url || "/vendor-placeholder.jpg",
+            bannerUrl: vendorData.banner_url || "/vendor-banner-placeholder.jpg",
+            location: vendorData.store_city ? `${vendorData.store_city}, ${vendorData.store_country || 'Cameroon'}` : 'Cameroon',
+            joinDate: vendorData.created_at,
+            rating: 4.5, // Default rating
+            reviewCount: 0, // Default review count
+            productCount: 0, // Will be updated when products are fetched
+          });
+        } else {
+          setError("Vendor not found");
+        }
+
+      } catch (err) {
+        console.error("Error fetching vendor:", err);
+        setError(err.message || "Failed to fetch vendor");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchVendor();
+    }
+  }, [id]);
+
+  // Fetch vendor products
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (!vendor?.id) return;
+      
+      try {
+        setProductsLoading(true);
+        
+        // Fetch products for this vendor - exactly like HomePage.jsx
+        const { data: productsData, error: productsError } = await supabase
+          .from('products')
+          .select('id, name, price, sale_price, images, stock_quantity, slug, vendor_id, status, description, category_id')
+          .eq('vendor_id', vendor.id)
+          .eq('status', 'published')
+          .order('created_at', { ascending: false });
+
+        if (productsError) {
+          console.error("Products fetch error:", productsError);
+          throw productsError;
+        }
+
+        // Process products to extract images - exactly like HomePage.jsx
+        const processedProducts = (productsData || []).map(product => {
+          let imageArray = [];
+          try {
+            if (typeof product.images === 'string') {
+              imageArray = JSON.parse(product.images);
+            } else if (Array.isArray(product.images)) {
+              imageArray = product.images;
+            }
+          } catch (e) {}
+          const firstImage = Array.isArray(imageArray) && imageArray.length > 0
+            ? imageArray[0]
+            : "/product-placeholder.jpg";
+          return {
+            ...product,
+            imageUrl: firstImage
+          };
+        });
+
+        setProducts(processedProducts);
+        
+        // Update vendor product count
+        setVendor(prev => prev ? { ...prev, productCount: processedProducts.length } : null);
+
+      } catch (err) {
+        console.error("Error fetching products:", err);
+      } finally {
+        setProductsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [vendor?.id]);
+
+  const handleAddToCart = (product) => {
+    if (!product) return;
+    
+    addToCart({
+      id: product.id,
+      vendor_id: product.vendor_id,
+      name: product.name,
+      price: product.sale_price || product.price,
+      image: product.imageUrl,
+      quantity: 1,
+      stock_quantity: product.stock_quantity
+    });
   };
-  
-  const handleCategoryChange = (e) => {
-    setCategory(e.target.value);
-    setCurrentPage(1); // Reset to first page
-  };
-  
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
-  
-  const handleAddToCart = (productId) => {
-    console.log("Add to cart:", productId);
-    // This would use CartContext in a real implementation
-  };
-  
-  const handleAddToWishlist = (productId) => {
-    console.log("Add to wishlist:", productId);
-  };
-  
-  if (vendorLoading) {
+
+  // Product Card Component
+  const ProductCard = ({ product }) => (
+    <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+      <div className="relative">
+        <img 
+          src={product.imageUrl || "/product-placeholder.jpg"} 
+          alt={product.name} 
+          className="w-full h-48 object-cover"
+        />
+        {product.sale_price && (
+          <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+            Sale
+          </div>
+        )}
+      </div>
+      <div className="p-4">
+        <h3 className="font-medium mb-1 truncate">{product.name}</h3>
+        <p className="text-sm text-gray-600 mt-1 line-clamp-2">{product.description}</p>
+        <div className="text-primary font-semibold mt-2">
+          {product.sale_price ? (
+            <>
+              <span>
+                {new Intl.NumberFormat('fr-CM', {
+                  style: 'currency',
+                  currency: 'XAF',
+                  minimumFractionDigits: 0
+                }).format(product.sale_price)}
+              </span>
+              <span className="text-gray-500 text-sm line-through ml-2">
+                {new Intl.NumberFormat('fr-CM', {
+                  style: 'currency',
+                  currency: 'XAF',
+                  minimumFractionDigits: 0
+                }).format(product.price)}
+              </span>
+            </>
+          ) : (
+            new Intl.NumberFormat('fr-CM', {
+              style: 'currency',
+              currency: 'XAF',
+              minimumFractionDigits: 0
+            }).format(product.price)
+          )}
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <Button 
+            variant="primary" 
+            size="sm"
+            onClick={() => handleAddToCart(product)}
+            disabled={product.stock_quantity <= 0}
+            className="flex items-center justify-center"
+          >
+            {t('common.add_to_cart')}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            as={Link}
+            to={`/products/${product.id}`}
+          >
+            {t('common.view_details')}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
-  
-  if (vendorError || !vendorData?.vendor) {
+
+  if (error || !vendor) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
-        <h2 className="text-2xl font-bold text-red-500 mb-4">{t("vendor_not_found")}</h2>
-        <p className="mb-8">{t("vendor_not_found_message")}</p>
+        <h2 className="text-2xl font-bold text-red-500 mb-4">{t("vendors.vendor_not_found")}</h2>
+        <p className="mb-8">{t("vendors.vendor_not_found_message")}</p>
         <Button as={Link} to="/vendors" variant="primary">
-          {t("browse_vendors")}
+          {t("vendors.browse_vendors")}
         </Button>
       </div>
     );
   }
-  
-  const vendor = vendorData.vendor;
-  const categories = categoriesData?.categories || [];
-  
+
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Store Header/Banner */}
@@ -116,7 +253,7 @@ export const VendorStorePage = () => {
             {/* Store Logo */}
             <div className="w-24 h-24 md:w-32 md:h-32 bg-white rounded-full overflow-hidden border-4 border-white shadow-lg -mt-12 md:mt-0">
               <img
-                src={vendor.logoUrl || "/default-store-logo.jpg"}
+                src={vendor.logoUrl || "/vendor-placeholder.jpg"}
                 alt={vendor.storeName}
                 className="w-full h-full object-cover"
               />
@@ -148,16 +285,6 @@ export const VendorStorePage = () => {
                 {vendor.description}
               </p>
             </div>
-            
-            {/* Store Actions */}
-            <div className="flex space-x-2">
-              <Button variant="primary" size="sm">
-                {t("follow_store")}
-              </Button>
-              <Button variant="outline" className="bg-white/10" size="sm">
-                {t("contact")}
-              </Button>
-            </div>
           </div>
         </div>
       </div>
@@ -179,17 +306,7 @@ export const VendorStorePage = () => {
               }`}
               onClick={() => setActiveTab("products")}
             >
-              {t("products")}
-            </button>
-            <button
-              className={`py-4 px-6 font-medium text-sm whitespace-nowrap ${
-                activeTab === "reviews"
-                  ? "text-primary border-b-2 border-primary"
-                  : "text-gray-600 hover:text-primary"
-              }`}
-              onClick={() => setActiveTab("reviews")}
-            >
-              {t("reviews")}
+              {t("common.products")}
             </button>
             <button
               className={`py-4 px-6 font-medium text-sm whitespace-nowrap ${
@@ -212,42 +329,10 @@ export const VendorStorePage = () => {
             {/* Filters */}
             <div className="flex flex-col md:flex-row justify-between mb-6 gap-4">
               <div className="flex items-center gap-4">
-                <h2 className="text-lg font-bold">{t("all_products")}</h2>
+                <h2 className="text-lg font-bold">{t("common.products")}</h2>
                 <Badge variant="secondary">
-                  {vendor.productCount} {t("products")}
+                  {vendor.productCount} {t("common.products")}
                 </Badge>
-              </div>
-              
-              <div className="flex flex-wrap gap-4">
-                {/* Category Filter */}
-                <div className="w-full sm:w-auto">
-                  <Select
-                    value={category}
-                    onChange={handleCategoryChange}
-                    options={[
-                      { value: "", label: t("all_categories") },
-                      ...categories.map(cat => ({ value: cat.id, label: cat.name }))
-                    ]}
-                    placeholder={t("filter_by_category")}
-                    className="w-full sm:w-48"
-                  />
-                </div>
-                
-                {/* Sort By */}
-                <div className="w-full sm:w-auto">
-                  <Select
-                    value={sortBy}
-                    onChange={handleSortChange}
-                    options={[
-                      { value: "newest", label: t("newest") },
-                      { value: "price_low", label: t("price_low_to_high") },
-                      { value: "price_high", label: t("price_high_to_low") },
-                      { value: "rating", label: t("highest_rating") },
-                    ]}
-                    placeholder={t("sort_by")}
-                    className="w-full sm:w-48"
-                  />
-                </div>
               </div>
             </div>
             
@@ -256,130 +341,18 @@ export const VendorStorePage = () => {
               <div className="flex justify-center items-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
               </div>
-            ) : productsError || products.length === 0 ? (
+            ) : products.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-                <h3 className="text-lg font-medium mb-2">
-                  {productsError ? t("error_loading_products") : t("no_products_found")}
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  {productsError ? t("try_again_later") : t("vendor_no_products")}
-                </p>
+                <h3 className="text-lg font-medium mb-2">{t("common.no_products_found")}</h3>
+                <p className="text-gray-600 mb-6">{t("vendor_no_products")}</p>
               </div>
             ) : (
-              <>
-                <ProductGrid
-                  products={products}
-                  onAddToCart={handleAddToCart}
-                  onAddToWishlist={handleAddToWishlist}
-                />
-                
-                {/* Pagination */}
-                {pagination.totalPages > 1 && (
-                  <div className="mt-8 flex justify-center">
-                    <Pagination
-                      currentPage={currentPage}
-                      totalPages={pagination.totalPages}
-                      onPageChange={handlePageChange}
-                    />
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-        
-        {/* Reviews Tab */}
-        {activeTab === "reviews" && (
-          <div>
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <div className="flex flex-col md:flex-row gap-8">
-                {/* Overall Rating */}
-                <div className="md:w-1/3 flex flex-col items-center">
-                  <div className="text-5xl font-bold text-primary mb-2">
-                    {vendor.rating?.toFixed(1)}
-                  </div>
-                  <div className="flex mb-2">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`w-5 h-5 ${
-                          i < Math.floor(vendor.rating)
-                            ? "fill-yellow-400 text-yellow-400"
-                            : "fill-none text-gray-300"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {t("based_on")} {vendor.reviewCount} {t("reviews")}
-                  </div>
-                </div>
-                
-                {/* Rating Breakdown */}
-                <div className="md:w-2/3">
-                  {[5, 4, 3, 2, 1].map((star) => {
-                    const percentage = vendor.ratingBreakdown?.[star] || 0;
-                    return (
-                      <div key={star} className="flex items-center mb-2">
-                        <div className="w-12 text-sm text-gray-600">
-                          {star} {t("stars")}
-                        </div>
-                        <div className="flex-1 mx-3">
-                          <div className="h-2 rounded-full bg-gray-200">
-                            <div
-                              className="h-2 rounded-full bg-primary"
-                              style={{ width: `${percentage}%` }}
-                            />
-                          </div>
-                        </div>
-                        <div className="w-9 text-sm text-gray-600">{percentage}%</div>
-                      </div>
-                    );
-                  })}
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {products.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
               </div>
-            </div>
-            
-            {/* Review List */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-medium mb-6">{t("customer_reviews")}</h3>
-              
-              {vendor.reviews?.length > 0 ? (
-                <div className="space-y-6">
-                  {vendor.reviews.map((review, index) => (
-                    <div key={index} className="border-b border-gray-100 pb-6 last:border-b-0">
-                      <div className="flex justify-between mb-2">
-                        <div>
-                          <h4 className="font-medium">{review.userName}</h4>
-                          <div className="flex items-center text-sm text-gray-500">
-                            <div className="flex">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <Star
-                                  key={i}
-                                  className={`w-3 h-3 ${
-                                    i < Math.floor(review.rating)
-                                      ? "fill-yellow-400 text-yellow-400"
-                                      : "fill-none text-gray-300"
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                        <span className="text-sm text-gray-500">
-                          {new Date(review.date).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <p className="text-gray-600">{review.comment}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-center py-8">
-                  {t("no_reviews_yet")}
-                </p>
-              )}
-            </div>
+            )}
           </div>
         )}
         
@@ -394,48 +367,21 @@ export const VendorStorePage = () => {
               <div>
                 <h4 className="font-medium mb-4">{t("store_information")}</h4>
                 <ul className="space-y-3">
-                  {vendor.address && (
+                  {vendor.location && (
                     <li className="flex">
                       <MapPin className="w-5 h-5 text-gray-400 mr-2 flex-shrink-0" />
-                      <span className="text-gray-600">{vendor.address}</span>
+                      <span className="text-gray-600">{vendor.location}</span>
                     </li>
                   )}
-                  {vendor.phone && (
-                    <li className="flex">
-                      <Phone className="w-5 h-5 text-gray-400 mr-2 flex-shrink-0" />
-                      <span className="text-gray-600">{vendor.phone}</span>
-                    </li>
-                  )}
-                  {vendor.email && (
-                    <li className="flex">
-                      <Mail className="w-5 h-5 text-gray-400 mr-2 flex-shrink-0" />
-                      <span className="text-gray-600">{vendor.email}</span>
-                    </li>
-                  )}
-                  {vendor.hours && (
+                  {vendor.joinDate && (
                     <li className="flex">
                       <Clock className="w-5 h-5 text-gray-400 mr-2 flex-shrink-0" />
-                      <div className="text-gray-600">
-                        {vendor.hours.map((hour, index) => (
-                          <div key={index}>{hour}</div>
-                        ))}
-                      </div>
+                      <span className="text-gray-600">
+                        {t("member_since")} {new Date(vendor.joinDate).getFullYear()}
+                      </span>
                     </li>
                   )}
                 </ul>
-              </div>
-              
-              {/* Store Policies */}
-              <div>
-                <h4 className="font-medium mb-4">{t("store_policies")}</h4>
-                <div className="space-y-4">
-                  {vendor.policies?.map((policy, index) => (
-                    <div key={index}>
-                      <h5 className="font-medium text-sm mb-1">{policy.title}</h5>
-                      <p className="text-sm text-gray-600">{policy.content}</p>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           </div>
@@ -444,3 +390,6 @@ export const VendorStorePage = () => {
     </div>
   );
 };
+
+export default VendorStorePage;
+

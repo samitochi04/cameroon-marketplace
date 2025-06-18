@@ -7,6 +7,7 @@ import { orderService } from '../services/orderService';
 import { Button } from '@/components/ui/Button';
 import { CinetpayCheckout } from '@/components/payment/CinetpayCheckout';
 import { Input } from '@/components/ui/Input';
+import axios from 'axios';
 
 const PaymentPage = () => {
   const { t } = useTranslation();
@@ -90,9 +91,23 @@ const PaymentPage = () => {
     }
   };
 
-  const handlePaymentSuccess = () => {
-    // Clear payment method from localStorage
-    localStorage.removeItem('selectedPaymentMethod');
+  // After payment is successful
+  const handlePaymentSuccess = async () => {
+    // Retrieve order data from localStorage
+    const pendingOrder = JSON.parse(localStorage.getItem('pendingOrder'));
+    if (pendingOrder) {
+      try {
+        // Send order to backend with status "pending"
+        await axios.post(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/orders`,
+          { ...pendingOrder, status: 'pending' }
+        );
+        // Clear pending order from storage
+        localStorage.removeItem('pendingOrder');
+      } catch (err) {
+        // Optionally handle error (show message, etc)
+      }
+    }
     // Redirect to order confirmation
     navigate(`/order-confirmation/${orderId}`);
   };

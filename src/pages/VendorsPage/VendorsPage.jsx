@@ -4,8 +4,9 @@ import { useTranslation } from "react-i18next";
 import { Star, Search, ChevronDown } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { supabase } from "@/lib/supabase";
 
-// Mock data for vendors
+// Mock data for vendors (fallback)
 const MOCK_VENDORS = [
   {
     id: "v1",
@@ -138,20 +139,62 @@ export const VendorsPage = () => {
   const [sortBy, setSortBy] = useState("featured");
   const [selectedCategory, setSelectedCategory] = useState("");
   
-  // Extract all unique categories from vendors
-  const allCategories = [...new Set(MOCK_VENDORS.flatMap(v => v.categories))];
-  
-  // Load mock data
+  // Fetch vendors from Supabase - exactly like HomePage.jsx
   useEffect(() => {
-    // Simulate API delay
-    const timer = setTimeout(() => {
-      setVendors(MOCK_VENDORS);
-      setFilteredVendors(MOCK_VENDORS);
-      setLoading(false);
-    }, 500);
-    
-    return () => clearTimeout(timer);
+    const fetchVendors = async () => {
+      setLoading(true);
+      try {
+        // Fetch approved vendors from Supabase with only existing columns
+        const { data: vendorsData, error: vendorsError } = await supabase
+          .from('vendors')
+          .select('id, store_name, banner_url, logo_url, store_city, store_country, total_earnings, created_at')
+          .eq('status', 'approved')
+          .order('total_earnings', { ascending: false });
+
+        if (vendorsError) throw vendorsError;
+
+        // Process vendors data exactly like HomePage.jsx
+        const processedVendors = (vendorsData || []).map(vendor => ({
+          id: vendor.id,
+          name: vendor.store_name,
+          slug: vendor.id, // Use ID as slug since we don't have a slug field
+          description: vendor.description || 'Quality products from a trusted vendor', // Use default description
+          logoUrl: vendor.logo_url || "/vendor-placeholder.jpg",
+          bannerUrl: vendor.banner_url || "/vendor-banner-placeholder.jpg",
+          rating: 4.5, // Default rating since we don't have this data yet
+          reviewCount: 0, // Default review count
+          productCount: 0, // Will be populated separately if needed
+          location: vendor.store_city ? `${vendor.store_city}, ${vendor.store_country || 'Cameroon'}` : 'Cameroon',
+          joinDate: vendor.created_at,
+          featured: vendor.total_earnings > 100000, // Consider high-earning vendors as featured
+          categories: [] // Will be populated if needed
+        }));
+
+        // Use real data if available, otherwise fallback to mock data
+        if (processedVendors.length > 0) {
+          setVendors(processedVendors);
+          setFilteredVendors(processedVendors);
+        } else {
+          console.log("No vendors found in database, using mock data");
+          setVendors(MOCK_VENDORS);
+          setFilteredVendors(MOCK_VENDORS);
+        }
+        
+      } catch (err) {
+        console.error("Error fetching vendors:", err);
+        // Fallback to mock data on error
+        setVendors(MOCK_VENDORS);
+        setFilteredVendors(MOCK_VENDORS);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVendors();
   }, []);
+  
+  // Extract all unique categories from vendors
+  const allCategories = [...new Set(vendors.flatMap(v => v.categories || []))];
   
   // Apply filters and sorting
   useEffect(() => {
@@ -289,7 +332,7 @@ export const VendorsPage = () => {
               {filteredVendors
                 .filter(v => v.featured)
                 .map(vendor => (
-                  <Link key={vendor.id} to={`/vendor/${vendor.slug}`} className="block">
+                  <Link key={vendor.id} to={`/vendor/${vendor.id}`} className="block">
                     <Card className="overflow-hidden hover:shadow-md transition-shadow h-full flex flex-col">
                       <div className="h-32 bg-gray-200 relative overflow-hidden">
                         <img 
@@ -354,7 +397,7 @@ export const VendorsPage = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredVendors.map(vendor => (
-                <Link key={vendor.id} to={`/vendor/${vendor.slug}`} className="block">
+                <Link key={vendor.id} to={`/vendor/${vendor.id}`} className="block">
                   <Card className="overflow-hidden hover:shadow-md transition-shadow h-full flex flex-col">
                     <div className="h-40 relative overflow-hidden">
                       <img 

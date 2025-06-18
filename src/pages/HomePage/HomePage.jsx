@@ -180,14 +180,20 @@ export const HomePage = () => {
   const ProductCard = ({ product }) => (
     <div className="border rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow">
       <div className="relative h-48 overflow-hidden">
-        <img 
-          src={product.imageUrl || "/product-placeholder.jpg"} 
-          alt={product.name} 
-          className="w-full h-full object-cover transition-transform hover:scale-105"
-        />
+        <Link to={`/products/${product.id}`}>
+          <img 
+            src={product.imageUrl || "/product-placeholder.jpg"} 
+            alt={product.name} 
+            className="w-full h-full object-cover transition-transform hover:scale-105"
+          />
+        </Link>
       </div>
       <div className="p-4">
-        <h3 className="font-medium text-gray-900 truncate">{product.name}</h3>
+        <h3 className="font-medium text-gray-900 truncate">
+          <Link to={`/products/${product.id}`} className="hover:text-primary">
+            {product.name}
+          </Link>
+        </h3>
         <div className="mt-2 flex justify-between items-center">
           <div>
             {product.sale_price ? (
@@ -236,7 +242,7 @@ export const HomePage = () => {
             variant="outline"
             size="sm"
             as={Link}
-            to={`/products/${product.slug || product.id}`}
+            to={`/products/${product.id}`}
           >
             {t("common.view_details")}
           </Button>

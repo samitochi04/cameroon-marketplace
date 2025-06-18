@@ -1,66 +1,89 @@
-const { createCinetpayPayment } = require('../services/cinetpayService');
+const axios = require('axios');
+require('dotenv').config();
 const supabase = require('../supabase/supabaseClient');
 
 exports.initializePayment = async (req, res) => {
   try {
-    const { orderId, amount, customer, description, metadata } = req.body;
-    
-    if (!orderId || !amount) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Order ID and amount are required' 
-      });
-    }
-    
-    // Get order details from database if needed
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('id', orderId)
-      .single();
-    
-    if (orderError || !order) {
-      console.error('Error fetching order:', orderError);
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Order not found' 
-      });
-    }
-    
-    // Create payment in Cinetpay
-    const paymentData = await createCinetpayPayment({
-      transaction_id: orderId.toString(),
+    const {
       amount,
-      customer_name: customer?.name || order.shippingAddress?.fullName || 'Customer',
-      customer_email: customer?.email || 'customer@example.com',
-      customer_phone_number: customer?.phone || order.shippingAddress?.phoneNumber || '',
-      payment_method: metadata?.payment_method || 'ALL',
-    });
-    
-    // Update order with payment reference
-    await supabase
-      .from('orders')
-      .update({ 
-        payment_reference: paymentData.payment_token,
-        payment_status: 'pending' 
-      })
-      .eq('id', orderId);
-    
-    return res.status(200).json({
-      success: true,
-      data: {
-        paymentUrl: paymentData.payment_url,
-        paymentToken: paymentData.payment_token,
-        transactionId: orderId
+      currency,
+      description,
+      customer_id,
+      customer_name,
+      customer_surname,
+      customer_email,
+      customer_phone_number,
+      customer_address,
+      customer_city,
+      customer_country,
+      customer_state,
+      customer_zip_code,
+      notify_url,
+      return_url,
+      channels,
+      lang,
+      metadata
+    } = req.body;
+
+    const payload = {
+      apikey: process.env.CINETPAY_API_KEY,
+      site_id: process.env.CINETPAY_SITE_ID,
+      transaction_id: `${Date.now()}${Math.floor(Math.random() * 10000)}`,
+      amount,
+      currency,
+      description,
+      customer_id,
+      customer_name,
+      customer_surname,
+      customer_email,
+      customer_phone_number,
+      customer_address,
+      customer_city,
+      customer_country,
+      customer_state,
+      customer_zip_code,
+      notify_url,
+      return_url,
+      channels,
+      lang,
+      metadata,
+    };
+    console.log('Cinetpay payload:', payload);
+
+    try {
+      const response = await axios.post(
+        'https://api-checkout.cinetpay.com/v2/payment',
+        payload,
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+      console.log('Cinetpay response:', response.data);
+
+      if (response.data && response.data.code === '201') {
+        return res.status(200).json({
+          success: true,
+          data: {
+            paymentUrl: response.data.data.payment_url,
+            paymentToken: response.data.data.payment_token,
+            transactionId: payload.transaction_id
+          }
+        });
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: response.data.message || 'Failed to create payment'
+        });
       }
-    });
-    
+    } catch (error) {
+      console.error('Cinetpay error:', error.response?.data || error.message);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to initialize payment'
+      });
+    }
   } catch (error) {
-    console.error('Payment initialization error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to initialize payment',
-      error: error.message
+      message: error.message || 'Failed to initialize payment'
     });
   }
 };
