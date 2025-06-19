@@ -1,322 +1,387 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Package, Search, Filter, ChevronDown, ShoppingBag } from 'lucide-react';
+import { 
+  Search, 
+  Filter, 
+  Calendar, 
+  Package, 
+  Eye,
+  ChevronDown,
+  Loader,
+  AlertCircle
+} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import supabase from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { Input } from '@/components/ui/Input';
 
 const CustomerOrders = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [sortBy, setSortBy] = useState('date-desc');
-  const fetchAttempted = useRef(false);
   
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [sortBy, setSortBy] = useState('newest_first');
+  const [showFilters, setShowFilters] = useState(false);
+
   useEffect(() => {
     const fetchOrders = async () => {
-      // Prevent multiple fetch attempts that could cause loops
-      if (fetchAttempted.current) return;
-      fetchAttempted.current = true;
-      
+      if (!user?.id) {
+        setError(t('dashboard.user_not_authenticated'));
+        setLoading(false);
+        return;
+      }
+
       try {
-        setIsLoading(true);
+        setLoading(true);
+        setError(null);
         
-        // Check if orders table exists first to prevent errors
-        const { error: tableCheckError } = await supabase
-          .from('orders')
-          .select('id')
-          .limit(1)
-          .maybeSingle();
-        
-        // If the table doesn't exist, return mock data instead of throwing an error
-        if (tableCheckError && tableCheckError.message.includes('does not exist')) {
-          console.log('Orders table does not exist yet, using mock data');
-          const mockOrderData = [
-            { 
-              id: 'mock-order-1', 
-              created_at: new Date().toISOString(),
-              total_amount: 19500,
-              status: 'pending',
-              user_id: user?.id
-            }
-          ];
-          
-          setOrders(mockOrderData);
-          setFilteredOrders(mockOrderData);
-          setError(null);
-          return;
-        }
-        
-        // Table exists, try to fetch real orders
-        const { data, error: fetchError } = await supabase
+        // Fetch orders for the current user only
+        const { data, error } = await supabase
           .from('orders')
           .select('*')
-          .eq('user_id', user?.id)
+          .eq('user_id', user.id) // Ensure user can only see their own orders
           .order('created_at', { ascending: false });
-        
-        if (fetchError) {
-          throw fetchError;
+
+        if (error) {
+          console.error('Error fetching orders:', error);
+          setError(t('orders.failed_to_load_orders'));
+        } else {
+          setOrders(data || []);
+          setFilteredOrders(data || []);
         }
-        
-        // Use mock data if there's no data yet
-        const orderData = data?.length > 0 ? data : [
-          { 
-            id: 'mock-order-1', 
-            created_at: new Date().toISOString(),
-            total_amount: 19500,
-            status: 'pending',
-            user_id: user?.id
-          }
-        ];
-        
-        setOrders(orderData);
-        setFilteredOrders(orderData);
-        setError(null);
-      } catch (error) {
-        console.error('Failed to fetch orders:', error);
-        // Show error message but use empty array to prevent further issues
-        setError(t('failed_to_load_orders'));
-        // Empty arrays, not null, to prevent rendering errors
-        setOrders([]);
-        setFilteredOrders([]);
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+        setError(t('orders.failed_to_load_orders'));
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
-    
-    // Only fetch if we have a user
-    if (user?.id) {
-      fetchOrders();
-    }
-    
-    // Cleanup function to reset the fetch attempted flag if component unmounts
-    return () => {
-      fetchAttempted.current = false;
-    };
-  }, [user?.id, t]); // Removed any dependencies that could cause loops
+
+    fetchOrders();
+  }, [user?.id, t]);
 
   // Apply filters and sorting
   useEffect(() => {
-    let result = [...orders];
-    
-    // Apply status filter
-    if (filterStatus !== 'all') {
-      result = result.filter(order => order.status === filterStatus);
-    }
-    
+    let filtered = [...orders];
+
     // Apply search filter
-    if (searchTerm) {
-      result = result.filter(order => 
-        order.id.toLowerCase().includes(searchTerm.toLowerCase())
+    if (searchQuery) {
+      filtered = filtered.filter(order =>
+        order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (order.payment_intent_id && order.payment_intent_id.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
-    
-    // Apply sorting
-    switch (sortBy) {
-      case 'date-asc':
-        result.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-        break;
-      case 'date-desc':
-        result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        break;
-      case 'amount-asc':
-        result.sort((a, b) => a.total_amount - b.total_amount);
-        break;
-      case 'amount-desc':
-        result.sort((a, b) => b.total_amount - a.total_amount);
-        break;
-      default:
-        break;
-    }
-    
-    setFilteredOrders(result);
-  }, [orders, filterStatus, searchTerm, sortBy]);
 
-  if (isLoading) {
+    // Apply status filter
+    if (statusFilter) {
+      filtered = filtered.filter(order => order.status === statusFilter);
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'oldest_first':
+          return new Date(a.created_at) - new Date(b.created_at);
+        case 'highest_amount':
+          return (b.total_amount || 0) - (a.total_amount || 0);
+        case 'lowest_amount':
+          return (a.total_amount || 0) - (b.total_amount || 0);
+        case 'newest_first':
+        default:
+          return new Date(b.created_at) - new Date(a.created_at);
+      }
+    });
+
+    setFilteredOrders(filtered);
+  }, [orders, searchQuery, statusFilter, sortBy]);
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('');
+    setSortBy('newest_first');
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('fr-CM', {
+      style: 'currency',
+      currency: 'XAF',
+      minimumFractionDigits: 0
+    }).format(amount || 0);
+  };
+
+  const getStatusBadgeVariant = (status) => {
+    switch (status) {
+      case 'completed':
+        return 'success';
+      case 'pending':
+        return 'warning';
+      case 'cancelled':
+        return 'error';
+      case 'processing':
+        return 'info';
+      default:
+        return 'default';
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'completed':
+        return t('orders.completed');
+      case 'pending':
+        return t('orders.pending');
+      case 'cancelled':
+        return t('orders.cancelled');
+      case 'processing':
+        return t('orders.processing');
+      default:
+        return status;
+    }
+  };
+
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+        <Loader className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-3">{t('common.loading')}</span>
       </div>
     );
   }
-  
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">{t('my_orders')}</h1>
-        
-        <div className="mt-4 md:mt-0">
-          <Link 
-            to="/products"
-            className="inline-flex items-center text-sm text-primary hover:underline"
-          >
-            <ShoppingBag className="h-4 w-4 mr-1" />
-            {t('continue_shopping')}
-          </Link>
-        </div>
+    <div className="max-w-6xl mx-auto p-4">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-2">{t('orders.my_orders')}</h1>
+        <p className="text-gray-600">{t('orders.view_track_orders')}</p>
       </div>
-      
-      {/* Show error inside the main return */}
+
+      {/* Error Message */}
       {error && (
-        <div className="text-center py-10 bg-white rounded-lg shadow-sm mb-6">
-          <Package className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-          <p className="text-red-500 mb-2">{error}</p>
-          <button 
-            onClick={() => {
-              fetchAttempted.current = false; // Reset flag
-              window.location.reload();
-            }}
-            className="text-primary hover:underline"
-          >
-            {t('try_again')}
-          </button>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-6 flex items-center">
+          <AlertCircle className="w-5 h-5 mr-2" />
+          {error}
         </div>
       )}
-      
-      {/* Only show the rest of the UI if no error */}
-      {!error && (
-        <>
-          {/* Filters */}
-          <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              {/* Search */}
-              <div className="relative flex-grow">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type="text"
-                  placeholder={t('search_by_order_id')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
-              </div>
-              
-              {/* Status filter */}
-              <div className="relative min-w-[180px]">
-                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="appearance-none pl-10 pr-10 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  <option value="all">{t('all_statuses')}</option>
-                  <option value="pending">{t('pending')}</option>
-                  <option value="processing">{t('processing')}</option>
-                  <option value="completed">{t('completed')}</option>
-                  <option value="cancelled">{t('cancelled')}</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 pointer-events-none" />
-              </div>
-              
-              {/* Sort by */}
-              <div className="relative min-w-[180px]">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="appearance-none px-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  <option value="date-desc">{t('newest_first')}</option>
-                  <option value="date-asc">{t('oldest_first')}</option>
-                  <option value="amount-desc">{t('highest_amount')}</option>
-                  <option value="amount-asc">{t('lowest_amount')}</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 pointer-events-none" />
-              </div>
+
+      {/* Filters */}
+      <Card className="mb-6 p-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          {/* Search */}
+          <div className="flex-1 max-w-md">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                type="text"
+                placeholder={t('orders.search_by_order_id')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
             </div>
           </div>
-          
-          {/* Orders list */}
-          {filteredOrders.length > 0 ? (
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {t('order_id')}
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {t('date')}
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {t('status')}
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {t('total')}
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {t('actions')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredOrders.map((order) => (
-                      <tr key={order.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          #{order.id.slice(0, 8)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(order.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                            order.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                            order.status === 'pending' ? 'bg-amber-100 text-amber-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {t(order.status)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Intl.NumberFormat('fr-CM', {
-                            style: 'currency',
-                            currency: 'XAF',
-                            minimumFractionDigits: 0,
-                          }).format(order.total_amount)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <Link to={`/account/orders/${order.id}`} className="text-primary hover:text-primary-dark">
-                            {t('view')}
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+
+          {/* Filter Toggle for Mobile */}
+          <Button
+            variant="outline"
+            className="md:hidden"
+            onClick={() => setShowFilters(!showFilters)}
+            leftIcon={<Filter className="w-4 h-4" />}
+          >
+            {t('common.filters')}
+          </Button>
+
+          {/* Desktop Filters */}
+          <div className="hidden md:flex items-center gap-4">
+            {/* Status Filter */}
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="appearance-none bg-white border border-gray-300 rounded-md px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="">{t('orders.all_statuses')}</option>
+                <option value="pending">{t('orders.pending')}</option>
+                <option value="processing">{t('orders.processing')}</option>
+                <option value="completed">{t('orders.completed')}</option>
+                <option value="cancelled">{t('orders.cancelled')}</option>
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
             </div>
+
+            {/* Sort */}
+            <div className="relative">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="appearance-none bg-white border border-gray-300 rounded-md px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="newest_first">{t('orders.newest_first')}</option>
+                <option value="oldest_first">{t('orders.oldest_first')}</option>
+                <option value="highest_amount">{t('orders.highest_amount')}</option>
+                <option value="lowest_amount">{t('orders.lowest_amount')}</option>
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+            </div>
+
+            {/* Clear Filters */}
+            {(searchQuery || statusFilter || sortBy !== 'newest_first') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+              >
+                {t('orders.clear_filters')}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Mobile Filters */}
+        {showFilters && (
+          <div className="md:hidden mt-4 pt-4 border-t border-gray-200 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('orders.status')}
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full appearance-none bg-white border border-gray-300 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="">{t('orders.all_statuses')}</option>
+                <option value="pending">{t('orders.pending')}</option>
+                <option value="processing">{t('orders.processing')}</option>
+                <option value="completed">{t('orders.completed')}</option>
+                <option value="cancelled">{t('orders.cancelled')}</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('common.sort_by')}
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full appearance-none bg-white border border-gray-300 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="newest_first">{t('orders.newest_first')}</option>
+                <option value="oldest_first">{t('orders.oldest_first')}</option>
+                <option value="highest_amount">{t('orders.highest_amount')}</option>
+                <option value="lowest_amount">{t('orders.lowest_amount')}</option>
+              </select>
+            </div>
+
+            {(searchQuery || statusFilter || sortBy !== 'newest_first') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearFilters}
+                className="w-full"
+              >
+                {t('orders.clear_filters')}
+              </Button>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {/* Orders List */}
+      {filteredOrders.length === 0 ? (
+        <Card className="p-8 text-center">
+          <Package className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            {orders.length === 0 ? t('orders.no_orders_yet') : t('orders.no_orders_found')}
+          </h3>
+          <p className="text-gray-600 mb-6">
+            {orders.length === 0 
+              ? t('orders.no_orders_yet_message')
+              : t('orders.no_orders_match_filters')
+            }
+          </p>
+          {orders.length === 0 ? (
+            <Button
+              as={Link}
+              to="/products"
+              variant="primary"
+            >
+              {t('dashboard.start_shopping')}
+            </Button>
           ) : (
-            <div className="bg-white p-8 rounded-lg shadow-sm text-center">
-              <Package className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-              <h3 className="text-lg font-medium text-gray-500 mb-1">{t('no_orders_found')}</h3>
-              <p className="text-gray-500 mb-4">{t('no_orders_match_filters')}</p>
-              {filterStatus !== 'all' || searchTerm ? (
-                <button 
-                  onClick={() => {
-                    setFilterStatus('all');
-                    setSearchTerm('');
-                  }}
-                  className="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-                >
-                  {t('clear_filters')}
-                </button>
-              ) : (
-                <Link
-                  to="/products"
-                  className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
-                >
-                  {t('start_shopping')}
-                </Link>
-              )}
-            </div>
+            <Button
+              variant="outline"
+              onClick={clearFilters}
+            >
+              {t('orders.clear_filters')}
+            </Button>
           )}
-        </>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {filteredOrders.map((order) => (
+            <Card key={order.id} className="p-6 hover:shadow-md transition-shadow">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-4 mb-2">
+                    <div>
+                      <h3 className="font-semibold text-lg">
+                        {t('orders.order')} #{order.id.slice(-8)}
+                      </h3>
+                      <div className="flex items-center text-sm text-gray-500 gap-4">
+                        <div className="flex items-center">
+                          <Calendar className="w-4 h-4 mr-1" />
+                          <span>{new Date(order.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Package className="w-4 h-4 mr-1" />
+                          <span>{formatCurrency(order.total_amount)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge variant={getStatusBadgeVariant(order.status)}>
+                      {getStatusText(order.status)}
+                    </Badge>
+                    
+                    {order.payment_status && (
+                      <Badge variant={order.payment_status === 'completed' ? 'success' : 'warning'}>
+                        {order.payment_status === 'completed' ? t('paid') : t('orders.payment_pending')}
+                      </Badge>
+                    )}
+                  </div>
+
+                  {order.notes && (
+                    <p className="text-sm text-gray-600">{order.notes}</p>
+                  )}
+                </div>
+
+                <div className="mt-4 md:mt-0 md:ml-6">
+                  <Button
+                    as={Link}
+                    to={`/account/orders/${order.id}`}
+                    variant="outline"
+                    size="sm"
+                    leftIcon={<Eye className="w-4 h-4" />}
+                  >
+                    {t('orders.view')}
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
       )}
     </div>
   );

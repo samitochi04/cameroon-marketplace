@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Mail, AlertCircle, CheckCircle } from 'lucide-react';
+import { Mail, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 const ForgotPasswordPage = () => {
@@ -11,6 +11,7 @@ const ForgotPasswordPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [emailSent, setEmailSent] = useState('');
   
   const { 
     register, 
@@ -30,9 +31,18 @@ const ForgotPasswordPage = () => {
     try {
       await resetPassword(data.email);
       setSuccess(true);
+      setEmailSent(data.email);
     } catch (error) {
       console.error('Password reset error:', error);
-      setError(error.message || t('password_reset_failed'));
+      
+      // Handle specific error cases
+      if (error.message?.includes('User not found')) {
+        setError(t('auth.email_not_found'));
+      } else if (error.message?.includes('Email not confirmed')) {
+        setError(t('auth.email_not_verified'));
+      } else {
+        setError(error.message || t('auth.password_reset_failed'));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -44,25 +54,38 @@ const ForgotPasswordPage = () => {
         {/* Logo and title */}
         <div className="text-center">
           <img
-            src="/logo.png"
+            src="/assets/logo.svg"
             alt="Cameroon Marketplace"
             className="mx-auto h-16 w-auto"
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
           />
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
-            {t('reset_your_password')}
+            {t('auth.reset_password')}
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            {t('enter_email_for_reset_instructions')}
+            {success 
+              ? t('auth.reset_email_sent_description')
+              : t('auth.enter_email_for_reset')
+            }
           </p>
         </div>
 
         {/* Success message */}
         {success && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md flex items-start">
-            <CheckCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="font-medium">{t('reset_email_sent')}</p>
-              <p className="text-sm mt-1">{t('check_email_for_instructions')}</p>
+          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md">
+            <div className="flex items-start">
+              <CheckCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium">{t('auth.reset_email_sent')}</p>
+                <p className="text-sm mt-1">
+                  {t('auth.reset_email_sent_to')} <strong>{emailSent}</strong>
+                </p>
+                <p className="text-sm mt-1">
+                  {t('auth.check_email_and_spam')}
+                </p>
+              </div>
             </div>
           </div>
         )}
@@ -81,7 +104,7 @@ const ForgotPasswordPage = () => {
             <div className="rounded-md shadow-sm">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('email')}
+                  {t('auth.email')}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -91,16 +114,16 @@ const ForgotPasswordPage = () => {
                     id="email"
                     type="email"
                     {...register('email', {
-                      required: t('email_required'),
+                      required: t('auth.email_required'),
                       pattern: {
                         value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                        message: t('invalid_email')
+                        message: t('auth.invalid_email')
                       }
                     })}
                     className={`appearance-none block w-full pl-10 pr-3 py-2 border ${
                       errors.email ? 'border-red-300' : 'border-gray-300'
                     } rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm`}
-                    placeholder={t('email_placeholder')}
+                    placeholder={t('auth.email_placeholder')}
                   />
                 </div>
                 {errors.email && (
@@ -113,19 +136,39 @@ const ForgotPasswordPage = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? t('sending') : t('send_reset_instructions')}
+                {isLoading ? t('auth.sending') : t('auth.send_reset_email')}
               </button>
             </div>
           </form>
         )}
 
+        {/* Back to login link */}
         <div className="text-center">
-          <Link to="/login" className="font-medium text-primary hover:text-primary-dark">
-            {t('back_to_login')}
+          <Link 
+            to="/login" 
+            className="inline-flex items-center font-medium text-primary hover:text-primary-dark"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            {t('auth.back_to_login')}
           </Link>
         </div>
+
+        {/* Resend option for success state */}
+        {success && (
+          <div className="text-center">
+            <button
+              onClick={() => {
+                setSuccess(false);
+                setError('');
+              }}
+              className="text-sm text-gray-600 hover:text-gray-800"
+            >
+              {t('auth.didnt_receive_email')}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

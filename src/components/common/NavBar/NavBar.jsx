@@ -15,12 +15,14 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from '@/hooks/useWishlist';
 
 export const NavBar = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
   const { cartItemsCount } = useCart();
+  const { wishlistCount } = useWishlist(); // Add this line
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -204,10 +206,15 @@ export const NavBar = () => {
               {/* Wishlist link */}
               <Link
                 to="/wishlist"
-                className="text-gray-500 hover:text-gray-700"
-                aria-label={t("wishlist")}
+                className="text-gray-500 hover:text-gray-700 relative"
+                aria-label={t("navigation.wishlist")}
               >
                 <Heart size={20} />
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    {wishlistCount}
+                  </span>
+                )}
               </Link>
 
               {/* Cart link with item count */}

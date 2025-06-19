@@ -1,46 +1,68 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Package, MapPin, CreditCard, Truck, AlertTriangle, Clock } from 'lucide-react';
+import { ArrowLeft, Package, MapPin, CreditCard, Truck, Calendar, Loader } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
 import axios from 'axios';
 
 const CustomerOrderDetail = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { orderId } = useParams();
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   const [order, setOrder] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   useEffect(() => {
     const fetchOrderDetails = async () => {
+      if (!user?.id) {
+        setError(t('dashboard.user_not_authenticated'));
+        setLoading(false);
+        return;
+      }
+
       try {
-        setIsLoading(true);
+        setLoading(true);
+        setError(null);
         
-        // Fetch order from our API
+        // Include userId as query parameter for security
         const response = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/orders/${orderId}`
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/orders/${orderId}?userId=${user.id}`
         );
         
         if (response.data?.success) {
           setOrder(response.data.order);
         } else {
-          setError(response.data?.message || t('order_not_found'));
+          setError(response.data?.message || t('orders.failed_to_load_orders'));
         }
-      } catch (error) {
-        console.error('Failed to fetch order details:', error);
-        setError(error.response?.data?.message || t('failed_to_load_order_details'));
+      } catch (err) {
+        console.error('Failed to fetch order details:', err);
+        if (err.response?.status === 404) {
+          setError(t('orders.order_not_found'));
+        } else {
+          setError(t('orders.failed_to_load_orders'));
+        }
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
-    
-    if (orderId) {
+
+    if (orderId && user?.id) {
       fetchOrderDetails();
     }
-  }, [orderId, t]);
+  }, [orderId, user?.id, t]);
 
-  // Format currency
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login?redirect=' + encodeURIComponent(window.location.pathname));
+    }
+  }, [isAuthenticated, navigate]);
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('fr-CM', {
       style: 'currency',
@@ -48,361 +70,278 @@ const CustomerOrderDetail = () => {
       minimumFractionDigits: 0
     }).format(amount || 0);
   };
-  
-  // Get status color
-  const getStatusColor = (status) => {
+
+  const getStatusBadgeVariant = (status) => {
     switch (status) {
       case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'processing':
-        return 'bg-blue-100 text-blue-800';
+        return 'success';
       case 'pending':
-        return 'bg-amber-100 text-amber-800';
+        return 'warning';
       case 'cancelled':
-        return 'bg-red-100 text-red-800';
+        return 'error';
+      case 'processing':
+        return 'info';
       default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-  
-  // Get payment status color
-  const getPaymentStatusColor = (status) => {
-    switch (status) {
-      case 'completed':
-      case 'paid':
-        return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-amber-100 text-amber-800';
-      case 'failed':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+        return 'default';
     }
   };
 
-  if (isLoading) {
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'completed':
+        return t('orders.completed');
+      case 'pending':
+        return t('orders.pending');
+      case 'cancelled':
+        return t('orders.cancelled');
+      case 'processing':
+        return t('orders.processing');
+      default:
+        return status;
+    }
+  };
+
+  const getPaymentStatusText = (status) => {
+    switch (status) {
+      case 'completed':
+        return t('paid');
+      case 'pending':
+        return t('orders.pending');
+      case 'failed':
+        return t('payment_failed');
+      default:
+        return status;
+    }
+  };
+
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+        <Loader className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-3">{t('loading_order')}</span>
       </div>
     );
   }
-  
+
   if (error || !order) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <button 
-          onClick={() => navigate('/account/orders')}
-          className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6"
-        >
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          {t('back_to_orders')}
-        </button>
-        
-        <div className="bg-white p-8 rounded-lg shadow-sm text-center">
-          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-2" />
-          <h2 className="text-xl font-bold text-gray-900 mb-2">{t('order_not_found')}</h2>
-          <p className="text-gray-500 mb-6">{error || t('order_not_found_message')}</p>
-          <Link
+      <div className="max-w-4xl mx-auto p-4">
+        <div className="text-center py-12">
+          <Package className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+          <h2 className="text-2xl font-bold mb-2">{t('order_not_found')}</h2>
+          <p className="text-gray-600 mb-6">{error || t('order_not_found_message')}</p>
+          <Button
+            as={Link}
             to="/account/orders"
-            className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
+            variant="primary"
+            leftIcon={<ArrowLeft className="w-4 h-4" />}
           >
-            {t('view_all_orders')}
-          </Link>
+            {t('orders.back_to_orders')}
+          </Button>
         </div>
       </div>
     );
   }
 
-  // Safe order ID display
-  const displayOrderId = order.id ? String(order.id).slice(0, 8) : 'N/A';
-
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <button 
-        onClick={() => navigate('/account/orders')}
-        className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6"
-      >
-        <ArrowLeft className="h-4 w-4 mr-1" />
-        {t('back_to_orders')}
-      </button>
-      
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">{t('order')} #{displayOrderId}</h1>
-          <p className="text-gray-500">
-            {t('placed_on')} {new Date(order.created_at).toLocaleDateString()}
-          </p>
-        </div>
+    <div className="max-w-4xl mx-auto p-4">
+      {/* Header */}
+      <div className="mb-6">
+        <Button
+          as={Link}
+          to="/account/orders"
+          variant="outline"
+          size="sm"
+          leftIcon={<ArrowLeft className="w-4 h-4" />}
+          className="mb-4"
+        >
+          {t('orders.back_to_orders')}
+        </Button>
         
-        <div className="mt-2 md:mt-0 flex flex-wrap gap-2">
-          <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(order.status)}`}>
-            {t(order.status)}
-          </span>
-          <span className={`px-3 py-1 text-sm font-medium rounded-full ${getPaymentStatusColor(order.payment_status)}`}>
-            {t(order.payment_status)}
-          </span>
-        </div>
-      </div>
-      
-      {/* Order Status Timeline */}
-      <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
-        <h2 className="text-lg font-semibold mb-4">{t('order_status')}</h2>
-        
-        <div className="relative">
-          {/* Timeline line */}
-          <div className="absolute left-3.5 top-3 h-full w-px bg-gray-200"></div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold mb-2">{t('orders.order_details')}</h1>
+            <p className="text-gray-600">
+              {t('orders.order_number')}: #{order.id.slice(-8)}
+            </p>
+          </div>
           
-          <div className="space-y-6">
-            {/* Order placed */}
-            <div className="flex">
-              <div className="flex-shrink-0 bg-green-500 rounded-full h-7 w-7 flex items-center justify-center z-10">
-                <CheckIcon className="h-4 w-4 text-white" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium">{t('order_placed')}</h3>
-                <p className="text-xs text-gray-500">{new Date(order.created_at).toLocaleString()}</p>
-              </div>
-            </div>
-            
-            {/* Processing */}
-            <div className="flex">
-              <div className={`flex-shrink-0 rounded-full h-7 w-7 flex items-center justify-center z-10 ${
-                ['processing', 'completed'].includes(order.status) 
-                ? 'bg-green-500' 
-                : order.status === 'cancelled'
-                  ? 'bg-red-500'
-                  : 'bg-gray-200'
-              }`}>
-                {['processing', 'completed'].includes(order.status) ? (
-                  <CheckIcon className="h-4 w-4 text-white" />
-                ) : order.status === 'cancelled' ? (
-                  <XIcon className="h-4 w-4 text-white" />
-                ) : (
-                  <Clock className="h-4 w-4 text-gray-500" />
-                )}
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium">{t('processing')}</h3>
-                <p className="text-xs text-gray-500">
-                  {['processing', 'completed'].includes(order.status)
-                    ? t('your_order_is_being_processed', 'Your order is being processed')
-                    : order.status === 'cancelled'
-                    ? t('order_processing_cancelled', 'Order processing cancelled')
-                    : t('waiting_for_processing', 'Waiting for processing')}
-                </p>
-              </div>
-            </div>
-            
-            {/* Shipped */}
-            <div className="flex">
-              <div className={`flex-shrink-0 rounded-full h-7 w-7 flex items-center justify-center z-10 ${
-                order.status === 'completed' 
-                  ? 'bg-green-500' 
-                  : order.status === 'cancelled'
-                    ? 'bg-red-500'
-                    : 'bg-gray-200'
-              }`}>
-                {order.status === 'completed' ? (
-                  <CheckIcon className="h-4 w-4 text-white" />
-                ) : order.status === 'cancelled' ? (
-                  <XIcon className="h-4 w-4 text-white" />
-                ) : (
-                  <Truck className="h-4 w-4 text-gray-500" />
-                )}
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium">{t('shipped')}</h3>
-                <p className="text-xs text-gray-500">
-                  {order.status === 'completed'
-                    ? t('your_order_has_been_shipped', 'Your order has been shipped')
-                    : order.status === 'cancelled'
-                    ? t('shipping_cancelled', 'Shipping cancelled')
-                    : t('waiting_for_shipping', 'Waiting for shipping')}
-                </p>
-                {order.tracking_number && (
-                  <p className="text-xs text-gray-900 mt-1">
-                    {t('tracking_number')}: {order.tracking_number}
-                  </p>
-                )}
-              </div>
-            </div>
-            
-            {/* Delivered */}
-            <div className="flex">
-              <div className={`flex-shrink-0 rounded-full h-7 w-7 flex items-center justify-center z-10 ${
-                order.status === 'completed' 
-                  ? 'bg-green-500' 
-                  : order.status === 'cancelled'
-                    ? 'bg-red-500'
-                    : 'bg-gray-200'
-              }`}>
-                {order.status === 'completed' ? (
-                  <CheckIcon className="h-4 w-4 text-white" />
-                ) : order.status === 'cancelled' ? (
-                  <XIcon className="h-4 w-4 text-white" />
-                ) : (
-                  <Package className="h-4 w-4 text-gray-500" />
-                )}
-              </div>
-              <div className="ml-4">
-                <h3 className="text-sm font-medium">{t('delivered')}</h3>
-                <p className="text-xs text-gray-500">
-                  {order.status === 'completed'
-                    ? t('your_order_has_been_delivered', 'Your order has been delivered')
-                    : order.status === 'cancelled'
-                    ? t('delivery_cancelled', 'Delivery cancelled')
-                    : t('waiting_for_delivery', 'Waiting for delivery')}
-                </p>
-              </div>
-            </div>
+          <div className="mt-4 sm:mt-0">
+            <Badge variant={getStatusBadgeVariant(order.status)} size="lg">
+              {getStatusText(order.status)}
+            </Badge>
           </div>
         </div>
       </div>
-      
+
+      {/* Order Info Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <Card className="p-4">
+          <div className="flex items-center">
+            <Calendar className="w-5 h-5 text-gray-500 mr-3" />
+            <div>
+              <p className="text-sm text-gray-500">{t('orders.order_date')}</p>
+              <p className="font-medium">
+                {new Date(order.created_at).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center">
+            <Package className="w-5 h-5 text-gray-500 mr-3" />
+            <div>
+              <p className="text-sm text-gray-500">{t('orders.order_status')}</p>
+              <p className="font-medium">{getStatusText(order.status)}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center">
+            <CreditCard className="w-5 h-5 text-gray-500 mr-3" />
+            <div>
+              <p className="text-sm text-gray-500">{t('orders.payment_status')}</p>
+              <p className="font-medium">{getPaymentStatusText(order.payment_status)}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center">
+            <div className="w-5 h-5 text-gray-500 mr-3 flex items-center justify-center">
+              XAF
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">{t('orders.total')}</p>
+              <p className="font-medium">{formatCurrency(order.total_amount)}</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
       {/* Order Items */}
-      <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
-        <h2 className="text-lg font-semibold mb-4">{t('order_items')}</h2>
-        
-        <div className="divide-y divide-gray-200">
-          {(order.items || []).map((item, index) => (
-            <div key={item.id || index} className="py-4 flex">
-              <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md border border-gray-200">
-                <img
-                  src={item.image || '/product-placeholder.jpg'}
-                  alt={item.name}
-                  className="h-full w-full object-cover object-center"
-                />
-              </div>
-              <div className="ml-4 flex flex-1 flex-col">
-                <div>
-                  <div className="flex justify-between text-base font-medium text-gray-900">
-                    <h3>
-                      <Link to={`/products/${item.product_id || item.productId}`}>
-                        {item.name}
-                      </Link>
-                    </h3>
-                    <p className="ml-4">{formatCurrency(item.total || (item.price * item.quantity))}</p>
-                  </div>
-                  <p className="mt-1 text-sm text-gray-500">
-                    {t('quantity')}: {item.quantity} × {formatCurrency(item.price)}
-                  </p>
-                  {item.variant && (
-                    <p className="mt-1 text-sm text-gray-500">
-                      {Object.entries(item.variant).map(([key, value], i, arr) => (
-                        <span key={key}>
-                          {key}: {value}
-                          {i < arr.length - 1 ? ', ' : ''}
-                        </span>
-                      ))}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-1 items-end">
-                  <div className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(item.status || 'pending')}`}>
-                    {t(item.status || 'pending')}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Shipping & Billing info */}
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <div className="flex items-center mb-4">
-            <MapPin className="h-5 w-5 text-gray-500" />
-            <h2 className="text-lg font-semibold ml-2">{t('shipping_information')}</h2>
+      {order.items && order.items.length > 0 && (
+        <Card className="mb-8">
+          <div className="p-6 border-b">
+            <h2 className="text-lg font-semibold">{t('orders.order_items')}</h2>
           </div>
           
-          <div className="space-y-1 mb-6">
-            <p className="font-medium">{order.shipping_address?.fullName || 'N/A'}</p>
+          <div className="divide-y">
+            {order.items.map((item, index) => (
+              <div key={item.id || index} className="p-6 flex">
+                <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-md border">
+                  <img
+                    src={item.image || '/product-placeholder.jpg'}
+                    alt={item.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src = '/product-placeholder.jpg';
+                    }}
+                  />
+                </div>
+                
+                <div className="ml-4 flex flex-1 flex-col">
+                  <div className="flex justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900">{item.name}</h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {t('orders.quantity')}: {item.quantity}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {t('orders.price')}: {formatCurrency(item.price)}
+                      </p>
+                    </div>
+                    
+                    <div className="text-right">
+                      <p className="font-medium">{formatCurrency(item.total)}</p>
+                      <Badge variant={getStatusBadgeVariant(item.status)} size="sm">
+                        {getStatusText(item.status)}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Addresses and Payment Info */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Shipping Address */}
+        <Card className="p-6">
+          <div className="flex items-center mb-4">
+            <MapPin className="w-5 h-5 text-gray-500 mr-2" />
+            <h3 className="font-semibold">{t('orders.shipping_address')}</h3>
+          </div>
+          
+          <div className="text-sm space-y-1">
+            <p className="font-medium">
+              {order.shipping_address?.fullName || 'N/A'}
+            </p>
             <p>{order.shipping_address?.address || 'N/A'}</p>
-            <p>{order.shipping_address?.city || 'N/A'}, {order.shipping_address?.region || 'N/A'}</p>
+            <p>
+              {order.shipping_address?.city || 'N/A'}, {order.shipping_address?.region || 'N/A'}
+            </p>
             <p>{order.shipping_address?.phoneNumber || 'N/A'}</p>
           </div>
-          
+        </Card>
+
+        {/* Payment Information */}
+        <Card className="p-6">
           <div className="flex items-center mb-4">
-            <CreditCard className="h-5 w-5 text-gray-500" />
-            <h2 className="text-lg font-semibold ml-2">{t('billing_information')}</h2>
+            <CreditCard className="w-5 h-5 text-gray-500 mr-2" />
+            <h3 className="font-semibold">{t('payment_information')}</h3>
           </div>
           
-          <div className="space-y-1">
-            <p className="font-medium">{order.billing_address?.fullName || order.shipping_address?.fullName || 'N/A'}</p>
-            <p>{order.billing_address?.address || order.shipping_address?.address || 'N/A'}</p>
-            <p>{order.billing_address?.city || order.shipping_address?.city || 'N/A'}, {order.billing_address?.region || order.shipping_address?.region || 'N/A'}</p>
-            <p>{order.billing_address?.phoneNumber || order.shipping_address?.phoneNumber || 'N/A'}</p>
-          </div>
-        </div>
-        
-        {/* Payment info & Summary */}
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <div className="flex items-center mb-4">
-            <CreditCard className="h-5 w-5 text-gray-500" />
-            <h2 className="text-lg font-semibold ml-2">{t('payment_details')}</h2>
-          </div>
-          
-          <div className="space-y-2 mb-6">
+          <div className="text-sm space-y-2">
             <div className="flex justify-between">
-              <span>{t('payment_method')}:</span>
-              <span>
+              <span className="text-gray-500">{t('payment_method')}:</span>
+              <span className="font-medium">
                 {order.payment_method === 'simulated_payment' ? 'Simulated Payment (Dev)' :
                  order.payment_method === 'mtn_mobile_money' ? 'MTN Mobile Money' :
                  order.payment_method === 'orange_money' ? 'Orange Money' :
                  t(order.payment_method || 'mobile_money')}
               </span>
             </div>
-            <div className="flex justify-between">
-              <span>{t('payment_status')}:</span>
-              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getPaymentStatusColor(order.payment_status)}`}>
-                {t(order.payment_status)}
-              </span>
-            </div>
-          </div>
-          
-          <div className="flex items-center mb-4">
-            <Package className="h-5 w-5 text-gray-500" />
-            <h2 className="text-lg font-semibold ml-2">{t('order_summary')}</h2>
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span>{t('subtotal')}:</span>
-              <span>{formatCurrency(order.subtotal)}</span>
-            </div>
             
             <div className="flex justify-between">
-              <span>{t('shipping')}:</span>
-              <span>{order.shipping_fee > 0 ? formatCurrency(order.shipping_fee) : t('free')}</span>
+              <span className="text-gray-500">{t('payment_status')}:</span>
+              <Badge variant={order.payment_status === 'completed' ? 'success' : 'warning'}>
+                {getPaymentStatusText(order.payment_status)}
+              </Badge>
             </div>
-            
-            <div className="border-t border-gray-200 pt-2 mt-2">
-              <div className="flex justify-between font-semibold">
-                <span>{t('total')}:</span>
-                <span>{formatCurrency(order.total_amount)}</span>
-              </div>
-            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Order Summary */}
+      <Card className="p-6">
+        <h3 className="font-semibold mb-4">{t('order_summary')}</h3>
+        
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500">{t('orders.subtotal')}</span>
+            <span>{formatCurrency(order.subtotal)}</span>
+          </div>
+          
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500">{t('orders.shipping')}</span>
+            <span>{order.shipping_fee > 0 ? formatCurrency(order.shipping_fee) : t('free')}</span>
+          </div>
+          
+          <div className="border-t pt-2 mt-2 flex justify-between font-semibold">
+            <span>{t('orders.total')}</span>
+            <span>{formatCurrency(order.total_amount)}</span>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };
 
-// Helper icon components
-const CheckIcon = ({ className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <polyline points="20 6 9 17 4 12"></polyline>
-  </svg>
-);
-
-const XIcon = ({ className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <line x1="18" y1="6" x2="6" y2="18"></line>
-    <line x1="6" y1="6" x2="18" y2="18"></line>
-  </svg>
-);
-
 export default CustomerOrderDetail;
+          
+          

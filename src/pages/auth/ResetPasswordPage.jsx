@@ -1,19 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Lock, AlertCircle } from 'lucide-react';
+import { Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 const ResetPasswordPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
-  
   const { confirmPasswordReset } = useAuth();
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [validToken, setValidToken] = useState(false);
+  const [checkingToken, setCheckingToken] = useState(true);
   
   const { 
     register, 
@@ -28,35 +30,85 @@ const ResetPasswordPage = () => {
   });
   
   const password = watch('password');
+
+  // Check if we have a valid session from the reset link
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        setCheckingToken(true);
+        
+        // When user clicks reset link, Supabase redirects with tokens in URL
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Session error:', error);
+          setError(t('auth.invalid_reset_token'));
+          setValidToken(false);
+        } else if (session) {
+          setValidToken(true);
+        } else {
+          setError(t('auth.invalid_reset_token'));
+          setValidToken(false);
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
+        setError(t('auth.invalid_reset_token'));
+        setValidToken(false);
+      } finally {
+        setCheckingToken(false);
+      }
+    };
+
+    checkSession();
+  }, [t]);
   
   const onSubmit = async (data) => {
     setIsLoading(true);
     setError('');
     
     try {
-      if (!token) {
-        throw new Error(t('invalid_reset_token'));
-      }
+      await confirmPasswordReset(null, data.password);
       
-      await confirmPasswordReset(token, data.password);
-      navigate('/login?reset=success');
+      // Show success message and redirect to login
+      navigate('/login?reset=success', { 
+        state: { 
+          message: t('auth.password_reset_success') 
+        }
+      });
     } catch (error) {
       console.error('Password reset error:', error);
-      setError(error.message || t('password_reset_failed'));
+      setError(error.message || t('auth.password_reset_failed'));
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (!token) {
+  // Show loading while checking token
+  if (checkingToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">{t('auth.verifying_reset_link')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if invalid token
+  if (!validToken) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8 text-center">
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-            <h2 className="text-lg font-medium mb-2">{t('invalid_reset_link')}</h2>
-            <p>{t('reset_link_invalid_or_expired')}</p>
-            <Link to="/forgot-password" className="mt-4 inline-block font-medium text-primary hover:text-primary-dark">
-              {t('request_new_reset_link')}
+            <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+            <h2 className="text-lg font-medium mb-2">{t('auth.invalid_reset_link')}</h2>
+            <p className="mb-4">{error || t('auth.reset_link_expired')}</p>
+            <Link 
+              to="/forgot-password" 
+              className="inline-block font-medium text-primary hover:text-primary-dark"
+            >
+              {t('auth.request_new_reset_link')}
             </Link>
           </div>
         </div>
@@ -70,15 +122,18 @@ const ResetPasswordPage = () => {
         {/* Logo and title */}
         <div className="text-center">
           <img
-            src="/logo.png"
+            src="/assets/logo.svg"
             alt="Cameroon Marketplace"
             className="mx-auto h-16 w-auto"
+            onError={(e) => {
+              e.target.style.display = 'none';
+            }}
           />
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
-            {t('set_new_password')}
+            {t('auth.set_new_password')}
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            {t('create_new_password_for_account')}
+            {t('auth.create_new_password')}
           </p>
         </div>
 
@@ -95,7 +150,7 @@ const ResetPasswordPage = () => {
           <div className="space-y-4 rounded-md shadow-sm">
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                {t('new_password')}
+                {t('auth.new_password')}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -105,10 +160,10 @@ const ResetPasswordPage = () => {
                   id="password"
                   type="password"
                   {...register('password', {
-                    required: t('password_required'),
+                    required: t('auth.password_required'),
                     minLength: {
                       value: 8,
-                      message: t('password_min_length')
+                      message: t('auth.password_min_length')
                     }
                   })}
                   className={`appearance-none block w-full pl-10 pr-3 py-2 border ${
@@ -124,7 +179,7 @@ const ResetPasswordPage = () => {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                {t('confirm_password')}
+                {t('auth.confirm_password')}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -134,8 +189,8 @@ const ResetPasswordPage = () => {
                   id="confirmPassword"
                   type="password"
                   {...register('confirmPassword', {
-                    required: t('confirm_password_required'),
-                    validate: value => value === password || t('passwords_must_match')
+                    required: t('auth.confirm_password_required'),
+                    validate: value => value === password || t('auth.passwords_must_match')
                   })}
                   className={`appearance-none block w-full pl-10 pr-3 py-2 border ${
                     errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
@@ -153,12 +208,19 @@ const ResetPasswordPage = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? t('resetting_password') : t('reset_password')}
+              {isLoading ? t('auth.updating_password') : t('auth.update_password')}
             </button>
           </div>
         </form>
+
+        {/* Back to login link */}
+        <div className="text-center">
+          <Link to="/login" className="font-medium text-primary hover:text-primary-dark">
+            {t('auth.back_to_login')}
+          </Link>
+        </div>
       </div>
     </div>
   );

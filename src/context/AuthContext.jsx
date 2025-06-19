@@ -380,6 +380,54 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Add resetPassword function
+  const resetPassword = async (email) => {
+    try {
+      setLoading(true);
+      setAuthError(null);
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Password reset error:', error);
+      setAuthError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add confirmPasswordReset function
+  const confirmPasswordReset = async (accessToken, newPassword) => {
+    try {
+      setLoading(true);
+      setAuthError(null);
+      
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Password reset confirmation error:', error);
+      setAuthError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Provide auth state and functions to the rest of the app
   return (
     <AuthContext.Provider value={{ 
@@ -392,6 +440,8 @@ export function AuthProvider({ children }) {
       register, 
       loginWithGoogle,
       updateUserProfile, // Add the new function here
+      resetPassword,
+      confirmPasswordReset,
       clearAuthError: () => setAuthError(null)
     }}>
       {children}

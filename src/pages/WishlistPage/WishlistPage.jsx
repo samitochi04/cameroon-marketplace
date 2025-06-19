@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
-import { Heart, ChevronLeft, ShoppingBag, Trash2 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Heart, ShoppingCart, Trash2, ArrowLeft } from "lucide-react";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
@@ -10,13 +10,16 @@ import { Card } from "@/components/ui/Card";
 
 export const WishlistPage = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { 
     wishlistItems, 
     isLoading, 
     error, 
     removeFromWishlist, 
-    refreshWishlist 
+    refreshWishlist,
+    clearWishlist,
+    wishlistCount 
   } = useWishlist();
   const { addToCart } = useCart();
 
@@ -27,6 +30,14 @@ export const WishlistPage = () => {
     }
   }, [refreshWishlist, isAuthenticated]);
 
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('fr-CM', {
+      style: 'currency',
+      currency: 'XAF',
+      minimumFractionDigits: 0
+    }).format(amount);
+  };
+
   // Handle removing item from wishlist
   const handleRemove = async (productId) => {
     await removeFromWishlist(productId);
@@ -36,29 +47,34 @@ export const WishlistPage = () => {
   const handleAddToCart = async (item) => {
     await addToCart({
       id: item.product.id,
+      vendor_id: item.product.vendor_id,
       name: item.product.name,
-      price: item.product.salePrice || item.product.price,
+      price: item.product.sale_price || item.product.price,
       image: item.product.imageUrl,
-      quantity: 1
+      quantity: 1,
+      stock_quantity: item.product.stock_quantity
     });
+  };
+
+  const handleClearWishlist = async () => {
+    if (window.confirm(t('wishlist.confirm_clear_wishlist'))) {
+      await clearWishlist();
+    }
   };
 
   // Show login prompt if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-12">
-        <div className="flex flex-col items-center justify-center py-12">
-          <Heart className="h-16 w-16 text-gray-300 mb-4" />
-          <h2 className="text-2xl font-medium text-gray-900 mb-2">
-            {t("wishlist.please_login")}
-          </h2>
-          <p className="text-gray-500 mb-8">
-            {t("wishlist.login_to_view_wishlist")}
-          </p>
-          <Button as={Link} to="/login" variant="primary">
-            {t("auth.login")}
-          </Button>
-        </div>
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+        <Heart className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+        <h1 className="text-2xl font-bold mb-2">{t('wishlist.please_login')}</h1>
+        <p className="text-gray-600 mb-6">{t('wishlist.login_to_view_wishlist')}</p>
+        <Button
+          onClick={() => navigate('/login')}
+          variant="primary"
+        >
+          {t('auth.login')}
+        </Button>
       </div>
     );
   }
@@ -66,9 +82,8 @@ export const WishlistPage = () => {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-12">
-        <h1 className="text-3xl font-semibold mb-8">{t("wishlist.your_wishlist")}</h1>
-        <div className="flex justify-center py-12">
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
         </div>
       </div>
@@ -90,87 +105,132 @@ export const WishlistPage = () => {
   // Show empty wishlist
   if (wishlistItems.length === 0) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-12">
-        <h1 className="text-3xl font-semibold mb-8">{t("wishlist.your_wishlist")}</h1>
-        <div className="flex flex-col items-center justify-center py-12">
-          <Heart className="h-16 w-16 text-gray-300 mb-4" />
-          <h2 className="text-2xl font-medium text-gray-900 mb-2">
-            {t("wishlist.empty_wishlist")}
-          </h2>
-          <p className="text-gray-500 mb-8">{t("wishlist.discover_and_save")}</p>
-          <Button as={Link} to="/products" variant="primary">
-            {t("common.browse_products")}
-          </Button>
-        </div>
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+        <Heart className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+        <h1 className="text-2xl font-bold mb-2">{t('wishlist.empty_wishlist')}</h1>
+        <p className="text-gray-600 mb-6">{t('wishlist.discover_and_save')}</p>
+        <Button
+          as={Link}
+          to="/products"
+          variant="primary"
+          leftIcon={<ArrowLeft className="w-4 h-4" />}
+        >
+          {t('dashboard.start_shopping')}
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-12">
-      <h1 className="text-3xl font-semibold mb-8">{t("wishlist.your_wishlist")}</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-2xl font-bold mb-2">{t('wishlist.your_wishlist')}</h1>
+          <p className="text-gray-600">
+            {t('wishlist.items_count', { count: wishlistCount })}
+          </p>
+        </div>
+        
+        {wishlistItems.length > 0 && (
+          <Button
+            onClick={handleClearWishlist}
+            variant="outline"
+            className="text-red-600 border-red-600 hover:bg-red-50"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            {t('wishlist.clear_wishlist')}
+          </Button>
+        )}
+      </div>
+
+      {/* Wishlist Items */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {wishlistItems.map((item) => (
-          <Card key={item.id} className="overflow-hidden">
-            <div className="aspect-w-1 aspect-h-1">
-              <Link to={`/products/${item.product?.slug || item.productId}`}>
+          <Card key={item.id} className="overflow-hidden hover:shadow-md transition-shadow">
+            <div className="relative">
+              <Link to={`/products/${item.product.id}`}>
                 <img
-                  src={item.product?.imageUrl || "https://placehold.co/400x400?text=Product"}
-                  alt={item.product?.name || "Product"}
-                  className="w-full h-48 object-cover"
+                  src={item.product.imageUrl}
+                  alt={item.product.name}
+                  className="w-full h-48 object-cover hover:scale-105 transition-transform"
                 />
               </Link>
+              
+              {/* Remove from wishlist button */}
+              <button
+                onClick={() => handleRemove(item.product.id)}
+                className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition-colors"
+              >
+                <Heart className="w-4 h-4 text-red-500 fill-current" />
+              </button>
+
+              {/* Sale badge */}
+              {item.product.sale_price && (
+                <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                  {Math.round((1 - item.product.sale_price / item.product.price) * 100)}% {t('off')}
+                </div>
+              )}
             </div>
+
             <div className="p-4">
-              <Link to={`/products/${item.product?.slug || item.productId}`} className="block">
-                <h3 className="text-lg font-medium text-gray-900 mb-2 hover:text-primary">
-                  {item.product?.name || "Product"}
-                </h3>
-              </Link>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  {item.product?.salePrice ? (
-                    <div className="flex items-center space-x-2">
-                      <span className="text-lg font-semibold text-primary">
-                        ${item.product.salePrice}
-                      </span>
-                      <span className="text-sm text-gray-500 line-through">
-                        ${item.product.price}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-lg font-semibold">
-                      ${item.product?.price || "N/A"}
+              <h3 className="font-medium mb-2 line-clamp-2">
+                <Link 
+                  to={`/products/${item.product.id}`}
+                  className="hover:text-primary transition-colors"
+                >
+                  {item.product.name}
+                </Link>
+              </h3>
+
+              <div className="mb-3">
+                {item.product.sale_price ? (
+                  <div className="flex items-center space-x-2">
+                    <span className="text-lg font-bold text-primary">
+                      {formatCurrency(item.product.sale_price)}
                     </span>
-                  )}
-                </div>
-                <div>
-                  {item.product?.stockQuantity > 0 ? (
-                    <span className="text-sm text-green-600">
-                      {t("wishlist.in_stock")}
+                    <span className="text-sm text-gray-500 line-through">
+                      {formatCurrency(item.product.price)}
                     </span>
-                  ) : (
-                    <span className="text-sm text-red-600">
-                      {t("wishlist.out_of_stock")}
-                    </span>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <span className="text-lg font-bold text-primary">
+                    {formatCurrency(item.product.price)}
+                  </span>
+                )}
               </div>
+
+              {/* Stock status */}
+              <div className="mb-3">
+                {item.product.stock_quantity > 0 ? (
+                  <span className="text-sm text-green-600 font-medium">
+                    {t('wishlist.in_stock')}
+                  </span>
+                ) : (
+                  <span className="text-sm text-red-600 font-medium">
+                    {t('wishlist.out_of_stock')}
+                  </span>
+                )}
+              </div>
+
+              {/* Action buttons */}
               <div className="flex space-x-2">
                 <Button
-                  variant="primary"
-                  className="flex-1 flex items-center justify-center"
                   onClick={() => handleAddToCart(item)}
-                  disabled={!item.product?.stockQuantity || item.product?.stockQuantity <= 0}
+                  disabled={item.product.stock_quantity <= 0}
+                  variant="primary"
+                  size="sm"
+                  className="flex-1"
                 >
-                  <ShoppingBag className="w-4 h-4 mr-2" />
-                  {t("common.add_to_cart")}
+                  <ShoppingCart className="w-4 h-4 mr-1" />
+                  {t('common.add_to_cart')}
                 </Button>
+                
                 <Button
+                  onClick={() => handleRemove(item.product.id)}
                   variant="outline"
-                  className="flex items-center justify-center"
-                  onClick={() => handleRemove(item.productId)}
+                  size="sm"
+                  className="px-3"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -178,13 +238,6 @@ export const WishlistPage = () => {
             </div>
           </Card>
         ))}
-      </div>
-      
-      <div className="mt-8">
-        <Link to="/products" className="flex items-center text-primary hover:underline">
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          {t("common.continue_shopping")}
-        </Link>
       </div>
     </div>
   );

@@ -5,11 +5,13 @@ import { CheckCircle, Loader, Clock, Package, ChevronRight, ShoppingBag } from '
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
 
 export const OrderConfirmationPage = () => {
   const { t } = useTranslation();
   const { orderId } = useParams();
+  const { user } = useAuth();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,15 +21,62 @@ export const OrderConfirmationPage = () => {
       try {
         setLoading(true);
         
-        // Fetch order from API
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/orders/${orderId}`
-        );
+        // First try to get pending order from localStorage
+        const pendingOrderData = localStorage.getItem('pendingOrder');
+        if (pendingOrderData) {
+          try {
+            const pendingOrder = JSON.parse(pendingOrderData);
+            
+            // Create a mock order object from pending order data
+            const mockOrder = {
+              id: orderId,
+              totalAmount: pendingOrder.amount,
+              subtotal: pendingOrder.amount,
+              shipping: 0,
+              tax: 0,
+              discount: 0,
+              status: 'pending',
+              paymentStatus: 'completed',
+              paymentMethod: 'campay',
+              createdAt: new Date().toISOString(),
+              shippingAddress: pendingOrder.shippingAddress || {
+                fullName: pendingOrder.customer?.name || 'Customer',
+                address: pendingOrder.customer?.address || 'N/A',
+                city: pendingOrder.customer?.city || 'N/A',
+                region: 'N/A',
+                phoneNumber: pendingOrder.customer?.phone || 'N/A'
+              }
+            };
+            
+            setOrder(mockOrder);
+            
+            // Clear the pending order data
+            localStorage.removeItem('pendingOrder');
+            setLoading(false);
+            return; // Exit early since we found the order
+          } catch (parseError) {
+            console.error('Error parsing pending order:', parseError);
+          }
+        }
         
-        if (response.data?.success) {
-          setOrder(response.data.order);
+        // Try to fetch from API as fallback - include userId for security
+        if (user?.id) {
+          try {
+            const response = await axios.get(
+              `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/orders/${orderId}?userId=${user.id}`
+            );
+            
+            if (response.data?.success) {
+              setOrder(response.data.order);
+            } else {
+              setError(response.data?.message || t('order_not_found'));
+            }
+          } catch (apiError) {
+            console.error('API fetch error:', apiError);
+            setError(t('failed_to_load_order'));
+          }
         } else {
-          setError(response.data?.message || t('order_not_found'));
+          setError(t('user_not_authenticated'));
         }
         
       } catch (err) {
@@ -38,10 +87,10 @@ export const OrderConfirmationPage = () => {
       }
     };
 
-    if (orderId) {
+    if (orderId && user) {
       fetchOrderDetails();
     }
-  }, [orderId, t]);
+  }, [orderId, t, user]);
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -105,7 +154,7 @@ export const OrderConfirmationPage = () => {
             <div>
               <h3 className="font-semibold">{t('order_placed')}</h3>
               <p className="text-sm text-gray-500">
-                {new Date(order.created_at).toLocaleDateString()} {new Date(order.created_at).toLocaleTimeString()}
+                {new Date(order.created_at || order.createdAt || Date.now()).toLocaleDateString()} {new Date(order.created_at || order.createdAt || Date.now()).toLocaleTimeString()}
               </p>
             </div>
           </div>
@@ -173,7 +222,7 @@ export const OrderConfirmationPage = () => {
           <div className="mt-6 space-y-2 border-t border-gray-200 pt-4">
             <div className="flex justify-between text-sm">
               <span>{t('subtotal')}</span>
-              <span>{formatCurrency(order.subtotal)}</span>
+              <span>{formatCurrency(order.subtotal || order.totalAmount)}</span>
             </div>
             
             <div className="flex justify-between text-sm">
@@ -183,7 +232,7 @@ export const OrderConfirmationPage = () => {
             
             <div className="flex justify-between text-base font-medium pt-2 border-t border-gray-200">
               <span>{t('total')}</span>
-              <span>{formatCurrency(order.total_amount)}</span>
+              <span>{formatCurrency(order.total_amount || order.totalAmount)}</span>
             </div>
           </div>
         </Card>
@@ -254,4 +303,4 @@ export const OrderConfirmationPage = () => {
 };
 
 export default OrderConfirmationPage;
-                
+

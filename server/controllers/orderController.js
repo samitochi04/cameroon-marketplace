@@ -114,11 +114,12 @@ exports.createOrder = async (req, res) => {
 
         console.log('Created order:', order);
 
-        // Insert order items
+        // Insert order items with user_id
         const orderItems = items.map(item => ({
             order_id: order.id,
             product_id: item.productId,
             vendor_id: item.vendor_id,
+            user_id: userId, // Add user_id to each order item
             quantity: Number(item.quantity),
             price: Number(item.price),
             total: Number(item.total),
@@ -168,40 +169,75 @@ exports.createOrder = async (req, res) => {
     }
 };
 
-// Get order by ID with items
+// Get order by ID with items - ensure user can only see their own orders
 exports.getOrderById = async (req, res) => {
     try {
         const { id } = req.params;
+        const { userId } = req.query; // Get userId from query params
         
-        // Fetch order
+        // Fetch order with user validation
         const { data: order, error: orderError } = await supabase
             .from('orders')
             .select('*')
             .eq('id', id)
+            .eq('user_id', userId) // Ensure user can only see their own orders
             .single();
             
-        if (orderError) {
+        if (orderError || !order) {
             return res.status(404).json({
                 success: false,
-                message: 'Order not found'
+                message: 'Order not found or access denied'
             });
         }
 
-        // Fetch order items with product details
+        // Fetch order items with product details - fix the relationship ambiguity
         const { data: orderItems, error: itemsError } = await supabase
             .from('order_items')
             .select(`
                 *,
-                products (
+                products!order_items_product_id_fkey (
                     id,
                     name,
                     images
                 )
             `)
-            .eq('order_id', id);
+            .eq('order_id', id)
+            .eq('user_id', userId); // Ensure user can only see their own order items
 
         if (itemsError) {
             console.error('Error fetching order items:', itemsError);
+            // Fallback: fetch order items without product details
+            const { data: fallbackItems, error: fallbackError } = await supabase
+                .from('order_items')
+                .select('*')
+                .eq('order_id', id)
+                .eq('user_id', userId);
+                
+            if (fallbackError) {
+                console.error('Fallback order items fetch failed:', fallbackError);
+                return res.status(200).json({
+                    success: true,
+                    order: {
+                        ...order,
+                        items: []
+                    }
+                });
+            }
+            
+            // Process fallback items without product details
+            const processedFallbackItems = (fallbackItems || []).map(item => ({
+                ...item,
+                name: 'Product',
+                image: '/product-placeholder.jpg'
+            }));
+            
+            return res.status(200).json({
+                success: true,
+                order: {
+                    ...order,
+                    items: processedFallbackItems
+                }
+            });
         }
 
         // Process items to include image URLs
@@ -244,7 +280,7 @@ exports.getOrderById = async (req, res) => {
     }
 };
 
-// Get orders by user ID
+// Get orders by user ID - ensure user can only see their own orders
 exports.getOrdersByUserId = async (req, res) => {
     try {
         const { userId } = req.params;

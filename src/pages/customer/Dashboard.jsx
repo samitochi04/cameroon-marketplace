@@ -1,177 +1,366 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ShoppingBag, Package, Heart, User, Clock, CreditCard } from 'lucide-react';
+import { 
+  User, 
+  ShoppingBag, 
+  Clock, 
+  CheckCircle, 
+  Package,
+  TrendingUp,
+  Calendar,
+  Eye
+} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useApi } from '@/hooks/useApi';
+import { supabase } from '@/lib/supabase';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
 
 const CustomerDashboard = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { get } = useApi();
-  const [dashboardData, setDashboardData] = useState({
-    orderCount: 0,
-    recentOrders: [],
+  const [orders, setOrders] = useState([]);
+  const [stats, setStats] = useState({
+    totalOrders: 0,
     pendingOrders: 0,
-    wishlistCount: 0,
-    isLoading: true,
-    error: null
+    completedOrders: 0,
+    totalSpent: 0
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      try {
-        // Get stats
-        const [ordersRes, wishlistRes] = await Promise.all([
-          get('/orders/my-orders'),
-          get('/wishlist')
-        ]);
+      if (!user?.id) {
+        setError(t('dashboard.user_not_authenticated'));
+        setLoading(false);
+        return;
+      }
 
-        setDashboardData({
-          orderCount: ordersRes.data?.length || 0,
-          recentOrders: (ordersRes.data || []).slice(0, 3),
-          pendingOrders: (ordersRes.data || []).filter(order => 
-            order.status === 'pending' || order.status === 'processing'
-          ).length,
-          wishlistCount: wishlistRes.data?.length || 0,
-          isLoading: false,
-          error: null
-        });
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-        setDashboardData(prev => ({
-          ...prev,
-          isLoading: false,
-          error: t('failed_to_load_dashboard_data')
-        }));
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Fetch user orders
+        const { data: ordersData, error: ordersError } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (ordersError) {
+          console.error('Error fetching orders:', ordersError);
+          setError(t('dashboard.failed_to_load_orders'));
+        } else {
+          setOrders(ordersData || []);
+          
+          // Calculate stats
+          const totalOrders = ordersData?.length || 0;
+          const pendingOrders = ordersData?.filter(order => order.status === 'pending').length || 0;
+          const completedOrders = ordersData?.filter(order => order.status === 'completed').length || 0;
+          const totalSpent = ordersData?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+          
+          setStats({
+            totalOrders,
+            pendingOrders,
+            completedOrders,
+            totalSpent
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        setError(t('dashboard.failed_to_load_data'));
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, [get, t]);
+  }, [user?.id, t]);
 
-  if (dashboardData.isLoading) {
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('fr-CM', {
+      style: 'currency',
+      currency: 'XAF',
+      minimumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const getStatusBadgeVariant = (status) => {
+    switch (status) {
+      case 'completed':
+        return 'success';
+      case 'pending':
+        return 'warning';
+      case 'cancelled':
+        return 'error';
+      case 'processing':
+        return 'info';
+      default:
+        return 'default';
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'completed':
+        return t('orders.completed');
+      case 'pending':
+        return t('orders.pending');
+      case 'cancelled':
+        return t('orders.cancelled');
+      case 'processing':
+        return t('orders.processing');
+      default:
+        return status;
+    }
+  };
+
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">{t('dashboard')}</h1>
-      
-      {/* Welcome message */}
-      <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
-        <h2 className="font-medium text-lg mb-2">{t('welcome_back')}, {user?.name || t('customer')}</h2>
-        <p className="text-gray-600">{t('dashboard_welcome_message')}</p>
+    <div className="max-w-7xl mx-auto p-4 space-y-6">
+      {/* Welcome Section */}
+      <div className="mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold mb-2">
+          {t('dashboard.welcome_back')}, {user?.name || user?.email || t('dashboard.customer')}!
+        </h1>
+        <p className="text-gray-600">
+          {t('dashboard.dashboard_welcome_message')}
+        </p>
       </div>
-      
-      {/* Stats cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm flex items-center">
-          <div className="bg-primary/10 p-3 rounded-full">
-            <ShoppingBag className="h-6 w-6 text-primary" />
-          </div>
-          <div className="ml-4">
-            <h3 className="text-sm font-medium text-gray-500">{t('total_orders')}</h3>
-            <p className="text-2xl font-semibold">{dashboardData.orderCount}</p>
-          </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-6">
+          {error}
         </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow-sm flex items-center">
-          <div className="bg-amber-100 p-3 rounded-full">
-            <Clock className="h-6 w-6 text-amber-600" />
+      )}
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <Card className="p-6">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-blue-100 text-blue-600">
+              <ShoppingBag className="h-6 w-6" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">{t('dashboard.total_orders')}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.totalOrders}</p>
+            </div>
           </div>
-          <div className="ml-4">
-            <h3 className="text-sm font-medium text-gray-500">{t('pending_orders')}</h3>
-            <p className="text-2xl font-semibold">{dashboardData.pendingOrders}</p>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
+              <Clock className="h-6 w-6" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">{t('dashboard.pending_orders')}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.pendingOrders}</p>
+            </div>
           </div>
-        </div>
-        
-        <div className="bg-white p-6 rounded-lg shadow-sm flex items-center">
-          <div className="bg-red-100 p-3 rounded-full">
-            <Heart className="h-6 w-6 text-red-500" />
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-green-100 text-green-600">
+              <CheckCircle className="h-6 w-6" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">{t('dashboard.completed_orders')}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.completedOrders}</p>
+            </div>
           </div>
-          <div className="ml-4">
-            <h3 className="text-sm font-medium text-gray-500">{t('wishlist')}</h3>
-            <p className="text-2xl font-semibold">{dashboardData.wishlistCount}</p>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-purple-100 text-purple-600">
+              <TrendingUp className="h-6 w-6" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">{t('dashboard.total_spent')}</p>
+              <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalSpent)}</p>
+            </div>
           </div>
-        </div>
-        
-        <Link to="/account/profile" className="bg-white p-6 rounded-lg shadow-sm flex items-center hover:bg-gray-50 transition-colors">
-          <div className="bg-blue-100 p-3 rounded-full">
-            <User className="h-6 w-6 text-blue-600" />
-          </div>
-          <div className="ml-4">
-            <h3 className="text-sm font-medium text-gray-500">{t('my_profile')}</h3>
-            <p className="text-sm text-primary">{t('view_profile')}</p>
-          </div>
-        </Link>
+        </Card>
       </div>
-      
-      {/* Recent orders */}
-      <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="font-medium text-lg">{t('recent_orders')}</h2>
-          <Link to="/account/orders" className="text-primary text-sm hover:underline">
-            {t('view_all')}
-          </Link>
-        </div>
-        
-        {dashboardData.recentOrders.length > 0 ? (
-          <div className="divide-y divide-gray-200">
-            {dashboardData.recentOrders.map(order => (
-              <Link 
-                key={order.id} 
-                to={`/account/orders/${order.id}`}
-                className="flex items-center py-4 hover:bg-gray-50 px-2 -mx-2 rounded transition-colors"
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Recent Orders */}
+        <div className="lg:col-span-2">
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold">{t('dashboard.recent_orders')}</h2>
+              <Button
+                as={Link}
+                to="/account/orders"
+                variant="outline"
+                size="sm"
               >
-                <div className="flex-shrink-0">
-                  <Package className="h-8 w-8 text-gray-400" />
-                </div>
-                <div className="ml-4 flex-grow">
-                  <p className="font-medium">
-                    {t('order')} #{order.id.slice(0, 8)}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {new Date(order.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="font-medium">
-                    {new Intl.NumberFormat('fr-CM', {
-                      style: 'currency',
-                      currency: 'XAF',
-                      minimumFractionDigits: 0,
-                    }).format(order.total_amount)}
-                  </span>
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                    order.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                    order.status === 'pending' ? 'bg-amber-100 text-amber-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {t(order.status)}
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <Package className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-            <h3 className="text-lg font-medium text-gray-500 mb-1">{t('no_orders_yet')}</h3>
-            <p className="text-gray-500 mb-4">{t('no_orders_yet_message')}</p>
-            <Link
-              to="/products"
-              className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
-            >
-              {t('start_shopping')}
-            </Link>
-          </div>
-        )}
+                {t('dashboard.view_all_orders')}
+              </Button>
+            </div>
+
+            {orders.length === 0 ? (
+              <div className="text-center py-8">
+                <Package className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {t('dashboard.no_orders_yet')}
+                </h3>
+                <p className="text-gray-500 mb-6">
+                  {t('dashboard.no_orders_yet_message')}
+                </p>
+                <Button
+                  as={Link}
+                  to="/products"
+                  variant="primary"
+                >
+                  {t('dashboard.start_shopping')}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {orders.map((order) => (
+                  <div
+                    key={order.id}
+                    className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {t('orders.order')} #{order.id.slice(-8)}
+                          </p>
+                          <div className="flex items-center space-x-2 text-sm text-gray-500">
+                            <Calendar className="h-4 w-4" />
+                            <span>
+                              {new Date(order.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-4">
+                        <div className="text-right">
+                          <p className="font-medium text-gray-900">
+                            {formatCurrency(order.total_amount)}
+                          </p>
+                          <Badge variant={getStatusBadgeVariant(order.status)}>
+                            {getStatusText(order.status)}
+                          </Badge>
+                        </div>
+                        
+                        <Button
+                          as={Link}
+                          to={`/account/orders/${order.id}`}
+                          variant="outline"
+                          size="sm"
+                          leftIcon={<Eye className="h-4 w-4" />}
+                        >
+                          {t('orders.view')}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Quick Actions & Profile Summary */}
+        <div className="space-y-6">
+          {/* Profile Summary */}
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">{t('dashboard.profile_summary')}</h3>
+              <Button
+                as={Link}
+                to="/account/profile"
+                variant="outline"
+                size="sm"
+                leftIcon={<User className="h-4 w-4" />}
+              >
+                {t('dashboard.edit_profile')}
+              </Button>
+            </div>
+            
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-gray-500">{t('profile.name')}</p>
+                <p className="font-medium">{user?.name || t('dashboard.not_provided')}</p>
+              </div>
+              
+              <div>
+                <p className="text-sm text-gray-500">{t('profile.email')}</p>
+                <p className="font-medium">{user?.email}</p>
+              </div>
+              
+              <div>
+                <p className="text-sm text-gray-500">{t('profile.phone_number')}</p>
+                <p className="font-medium">{user?.phonenumber || t('dashboard.not_provided')}</p>
+              </div>
+              
+              <div>
+                <p className="text-sm text-gray-500">{t('dashboard.member_since')}</p>
+                <p className="font-medium">
+                  {user?.created_at 
+                    ? new Date(user.created_at).toLocaleDateString()
+                    : t('dashboard.not_available')
+                  }
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4">{t('dashboard.quick_actions')}</h3>
+            
+            <div className="space-y-3">
+              <Button
+                as={Link}
+                to="/products"
+                variant="primary"
+                className="w-full justify-start"
+                leftIcon={<ShoppingBag className="h-4 w-4" />}
+              >
+                {t('dashboard.browse_products')}
+              </Button>
+              
+              <Button
+                as={Link}
+                to="/account/orders"
+                variant="outline"
+                className="w-full justify-start"
+                leftIcon={<Package className="h-4 w-4" />}
+              >
+                {t('dashboard.view_orders')}
+              </Button>
+              
+              <Button
+                as={Link}
+                to="/account/profile"
+                variant="outline"
+                className="w-full justify-start"
+                leftIcon={<User className="h-4 w-4" />}
+              >
+                {t('dashboard.update_profile')}
+              </Button>
+            </div>
+          </Card>
+        </div>
       </div>
     </div>
   );
