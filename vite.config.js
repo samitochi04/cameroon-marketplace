@@ -34,9 +34,8 @@ export default defineConfig({
     port: 4173,
     host: true,
     allowedHosts: ['.sslip.io', '.hostinger.com'],
-  },
-  define: {
-    global: 'globalThis',
+  },  define: {
+    // Remove global definition to avoid conflicts
   },
   optimizeDeps: {
     include: ['react', 'react-dom'],
