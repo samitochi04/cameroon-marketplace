@@ -29,13 +29,10 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
-  },
-  preview: {
+  },  preview: {
     port: 4173,
     host: true,
     allowedHosts: ['.sslip.io', '.hostinger.com'],
-  },  define: {
-    // Remove global definition to avoid conflicts
   },
   optimizeDeps: {
     include: ['react', 'react-dom'],
