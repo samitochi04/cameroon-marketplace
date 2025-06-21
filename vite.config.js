@@ -12,6 +12,6 @@ export default defineConfig({
   preview: {
     port: 4173,
     host: true,
-    allowedHosts: ['qksgkso8ws00k440k0o0w4ss.31.97.68.94.sslip.io']
+    allowedHosts: ['.sslip.io']
   }
 })
