@@ -4,7 +4,86 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React</title>
+    <title>Cameroon Marketplace</title>
+    
+    <!-- Comprehensive global polyfill script - BEFORE Vite script -->
+    <script>
+      (function() {
+        'use strict';
+        
+        // Create a safe global object
+        const safeGlobal = (function() {
+          if (typeof globalThis !== 'undefined') return globalThis;
+          if (typeof window !== 'undefined') return window;
+          if (typeof global !== 'undefined') return global;
+          if (typeof self !== 'undefined') return self;
+          return {};
+        })();
+        
+        // Override global assignment attempts
+        try {
+          // Method 1: Define global as a getter/setter
+          if (typeof window !== 'undefined' && !window.hasOwnProperty('global')) {
+            Object.defineProperty(window, 'global', {
+              get: function() { return safeGlobal; },
+              set: function() { /* ignore assignments */ },
+              configurable: false,
+              enumerable: true
+            });
+          }
+          
+          // Method 2: Define global variable
+          if (typeof global === 'undefined') {
+            window.global = safeGlobal;
+          }
+        } catch (e) {
+          // Fallback: use var declaration
+          try {
+            var global = safeGlobal;
+          } catch (e2) {
+            console.warn('Could not set global variable:', e2);
+          }
+        }
+        
+        // Process polyfill
+        if (typeof process === 'undefined') {
+          try {
+            window.process = { 
+              env: {
+                NODE_ENV: 'production'
+              }
+            };
+          } catch (e) {
+            var process = { 
+              env: {
+                NODE_ENV: 'production'
+              }
+            };
+          }
+        }
+        
+        // Buffer polyfill (if needed)
+        if (typeof Buffer === 'undefined') {
+          try {
+            window.Buffer = {};
+          } catch (e) {
+            var Buffer = {};
+          }
+        }
+        
+        // Prevent further global modifications
+        if (typeof window !== 'undefined') {
+          const originalDefineProperty = Object.defineProperty;
+          Object.defineProperty = function(obj, prop, descriptor) {
+            if (obj === window && prop === 'global' && descriptor.writable === false) {
+              // Skip read-only global assignments
+              return obj;
+            }
+            return originalDefineProperty.call(this, obj, prop, descriptor);
+          };
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
