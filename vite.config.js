@@ -15,20 +15,14 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: true,
+    sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
           router: ['react-router-dom'],
-          supabase: ['@supabase/supabase-js'],
-          ui: ['lucide-react', 'clsx', 'class-variance-authority'],
         },
       },
-    },
-    commonjsOptions: {
-      transformMixedEsModules: true,
-      ignoreDynamicRequires: true,
     },
     target: 'esnext',
   },
@@ -42,14 +36,9 @@ export default defineConfig({
     allowedHosts: ['.sslip.io', '.hostinger.com'],
   },
   define: {
-    global: '(() => { try { return globalThis; } catch { return window; } })()',
-    'process.env': '{}',
-    'process.env.NODE_ENV': '"production"',
-    'process.versions': '{}',
-    'process.platform': '"browser"',
+    global: 'globalThis',
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', '@supabase/supabase-js'],
-    exclude: ['fsevents'],
+    include: ['react', 'react-dom'],
   },
 })
