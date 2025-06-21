@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,md}\"",
-    "preview": "vite preview --port 4173 --host",
+    "start": "npm run preview",
+    "preview": "vite preview --host 0.0.0.0 --port 4173",
     "tailwind-init": "tailwindcss init -p"
   },
   "dependencies": {
