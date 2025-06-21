@@ -9,9 +9,29 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+        },
+      },
+    },
+  },
+  server: {
+    port: 5173,
+    host: true,
+  },
   preview: {
     port: 4173,
     host: true,
-    allowedHosts: ['.sslip.io']
-  }
+    allowedHosts: ['.sslip.io', '.hostinger.com'],
+  },
+  define: {
+    global: 'globalThis',
+  },
 })
