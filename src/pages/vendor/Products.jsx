@@ -130,14 +130,14 @@ const VendorProducts = () => {
   return (
     <div className="p-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">{t('my_products')}</h1>
+        <h1 className="text-2xl font-bold">{t('vendor.my_products')}</h1>
         
         <Link 
           to="/vendor-portal/products/new"
           className="mt-3 md:mt-0 inline-flex items-center px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
         >
           <Plus className="h-4 w-4 mr-2" />
-          {t('add_new_product')}
+          {t('vendor.add_new_product')}
         </Link>
       </div>
       
@@ -149,7 +149,7 @@ const VendorProducts = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <input
               type="text"
-              placeholder={t('search_products')}
+              placeholder={t('vendor.search_products')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -164,10 +164,10 @@ const VendorProducts = () => {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="appearance-none pl-10 pr-10 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             >
-              <option value="all">{t('all_products')}</option>
-              <option value="published">{t('published')}</option>
-              <option value="draft">{t('drafts')}</option>
-              <option value="archived">{t('archived')}</option>
+              <option value="all">{t('vendor.all_products')}</option>
+              <option value="published">{t('vendor.published')}</option>
+              <option value="draft">{t('vendor.drafts')}</option>
+              <option value="archived">{t('vendor.archived')}</option>
             </select>
           </div>
         </div>
@@ -181,19 +181,22 @@ const VendorProducts = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('product')}
+                    {t('vendor.product')}
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('price')}
+                    {t('vendor.price')}
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('stock')}
+                    {t('vendor.products.sale_price')}
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('status')}
+                    {t('vendor.stock')}
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {t('vendor.status')}
                   </th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('actions')}
+                    {t('vendor.actions')}
                   </th>
                 </tr>
               </thead>
@@ -229,15 +232,15 @@ const VendorProducts = () => {
                       <div className="text-sm text-gray-900">
                         {formatCurrency(product.price)}
                       </div>
-                      {product.salePrice && (
-                        <div className="text-sm text-red-500">
-                          {formatCurrency(product.salePrice)}
-                        </div>
-                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-green-500">
+                        {formatCurrency(product.sale_price)}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {product.stockQuantity}
+                        {product.stock_quantity}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -334,23 +337,23 @@ const VendorProducts = () => {
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-sm mx-auto">
             <h3 className="text-lg font-medium text-gray-900 mb-4">
-              {t('confirm_delete')}
+              {t('vendor.products.confirm_delete')}
             </h3>
             <p className="text-gray-500 mb-6">
-              {t('confirm_delete_message', { name: productToDelete.name })}
+              {t('vendor.products.confirm_delete_message', { name: productToDelete.name })}
             </p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
                 className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
               >
-                {t('cancel')}
+                {t('vendor.products.cancel')}
               </button>
               <button
                 onClick={handleDelete}
                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
               >
-                {t('delete')}
+                {t('vendor.products.delete')}
               </button>
             </div>
           </div>

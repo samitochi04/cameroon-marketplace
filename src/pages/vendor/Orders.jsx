@@ -140,7 +140,6 @@ const VendorOrders = () => {
           .from('orders')
           .select(`
             id, 
-            order_number,
             user_id, 
             status, 
             total_amount, 
@@ -186,7 +185,6 @@ const VendorOrders = () => {
           if (!vendorOrdersMap[orderId]) {
             vendorOrdersMap[orderId] = {
               id: order.id,
-              order_number: order.order_number,
               created_at: order.created_at,
               customer: {
                 name: order.user?.name || "Unknown Customer",
@@ -350,7 +348,7 @@ const VendorOrders = () => {
             {/* Sort order */}
             <div>
               <label htmlFor="sort-order" className="block text-sm font-medium text-gray-700 mb-1">
-                {t('sort_by')}
+                {t('common.sort_by')}
               </label>
               <select
                 id="sort-order"
@@ -375,7 +373,7 @@ const VendorOrders = () => {
               <input
                 id="search-orders"
                 type="text"
-                placeholder={t('search')}
+                placeholder={t('orders.search_by_order_id')}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="w-full border border-gray-300 rounded-md shadow-sm py-2 pl-10 pr-3"
@@ -443,7 +441,7 @@ const VendorOrders = () => {
                 {currentOrders.map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {order.order_number || `#${order.id.slice(0, 8)}`}
+                      #{order.id.slice(0, 8)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div>{formatDate(order.created_at)}</div>

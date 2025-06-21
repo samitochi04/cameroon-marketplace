@@ -69,17 +69,22 @@ export const CartProvider = ({ children }) => {
     if (!product || !product.id) {
       console.error("Invalid product passed to addToCart", product);
       return;
-    }
-
-    // Ensure vendor_id is available
+    }    // Ensure vendor_id is available
     if (!product.vendor_id) {
       console.error("Product missing vendor_id:", product);
-      addToast({
-        title: "Error",
-        message: "Unable to add product to cart: missing vendor information",
-        type: "error"
-      });
-      return;
+      
+      // In development mode, allow adding products without vendor_id with a default value
+      if (import.meta.env.VITE_DEVELOPMENT_MODE === 'true' || import.meta.env.DEV) {
+        console.warn("Development mode: Adding product without vendor_id, using default");
+        product.vendor_id = 'default-vendor'; // Temporary fallback for development
+      } else {
+        addToast({
+          title: "Error",
+          message: "Unable to add product to cart: missing vendor information",
+          type: "error"
+        });
+        return;
+      }
     }
 
     // Check if current user is a vendor trying to buy their own product
@@ -95,8 +100,8 @@ export const CartProvider = ({ children }) => {
     // Make sure we have all the required fields
     const cartProduct = {
       id: product.id,
-      vendor_id: product.vendor_id, // <-- Ensure this is set!
-      name: product.name || "Unknown Product",
+      vendor_id: product.vendor_id, 
+      name: product.name,
       price: parseFloat(product.price) || 0,
       image: product.image || "/product-placeholder.jpg",
       quantity: quantity,

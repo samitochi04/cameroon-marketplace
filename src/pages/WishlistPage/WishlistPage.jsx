@@ -41,11 +41,11 @@ export const WishlistPage = () => {
   // Handle removing item from wishlist
   const handleRemove = async (productId) => {
     await removeFromWishlist(productId);
-  };
-
-  // Handle adding item to cart
-  const handleAddToCart = async (item) => {
-    await addToCart({
+  };  // Handle adding item to cart
+  const handleAddToCart = (item) => {
+    if (!item?.product) return;
+    
+    addToCart({
       id: item.product.id,
       vendor_id: item.product.vendor_id,
       name: item.product.name,
@@ -211,9 +211,7 @@ export const WishlistPage = () => {
                     {t('wishlist.out_of_stock')}
                   </span>
                 )}
-              </div>
-
-              {/* Action buttons */}
+              </div>              {/* Action buttons */}
               <div className="flex space-x-2">
                 <Button
                   onClick={() => handleAddToCart(item)}

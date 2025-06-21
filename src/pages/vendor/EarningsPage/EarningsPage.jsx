@@ -23,7 +23,6 @@ const EarningsPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [dateRange, setDateRange] = useState('all_time');
   const [error, setError] = useState(null);
-  
   // Fetch vendor earnings data
   useEffect(() => {
     const fetchEarningsData = async () => {
@@ -31,6 +30,7 @@ const EarningsPage = () => {
       
       try {
         setLoading(true);
+        setError(null);
         
         // Get vendor data including balance
         const { data: vendorData, error: vendorError } = await supabase
@@ -39,44 +39,98 @@ const EarningsPage = () => {
           .eq('id', user.id)
           .single();
           
-        if (vendorError) throw vendorError;
-        
-        // Build query for earnings based on date range
-        let query = supabase
-          .from('vendor_earnings')
-          .select('*', { count: 'exact' })
-          .eq('vendor_id', user.id);
-        
-        // Apply date filters
-        const now = new Date();
-        if (dateRange === 'last_30_days') {
-          const thirtyDaysAgo = new Date();
-          thirtyDaysAgo.setDate(now.getDate() - 30);
-          query = query.gte('created_at', thirtyDaysAgo.toISOString());
-        } else if (dateRange === 'last_90_days') {
-          const ninetyDaysAgo = new Date();
-          ninetyDaysAgo.setDate(now.getDate() - 90);
-          query = query.gte('created_at', ninetyDaysAgo.toISOString());
-        } else if (dateRange === 'this_year') {
-          const firstDayOfYear = new Date(now.getFullYear(), 0, 1);
-          query = query.gte('created_at', firstDayOfYear.toISOString());
+        if (vendorError) {
+          console.error('Error fetching vendor data:', vendorError);
+          throw new Error('Failed to fetch vendor data');
         }
         
-        // Order and paginate
-        query = query
-          .order('created_at', { ascending: false })
-          .range(
-            (currentPage - 1) * ITEMS_PER_PAGE,
-            currentPage * ITEMS_PER_PAGE - 1
-          );
+        // Build query for vendor_earnings based on date range
+        let query = supabase
+          .from('vendor_earnings')
+          .select(`
+            id,
+            vendor_id,
+            order_item_id,
+            amount,
+            fee,
+            net_amount,
+            status,
+            description,
+            created_at,
+            transaction_id
+          `, { count: 'exact' })
+          .eq('vendor_id', user.id)
+          .order('created_at', { ascending: false });
+
+        // Apply date range filter
+        const now = new Date();
+        let startDate;
+          switch (dateRange) {
+          case 'last_7_days':
+            startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            query = query.gte('created_at', startDate.toISOString());
+            break;
+          case 'last_30_days':
+            startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            query = query.gte('created_at', startDate.toISOString());
+            break;
+          case 'last_90_days':
+            startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+            query = query.gte('created_at', startDate.toISOString());
+            break;
+          case 'this_year': {
+            const firstDayOfYear = new Date(now.getFullYear(), 0, 1);
+            query = query.gte('created_at', firstDayOfYear.toISOString());
+            break;
+          }
+          case 'all_time':
+          default:
+            // No date filter for all time
+            break;
+        }
+
+        // Apply pagination
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE - 1;
         
-        const { data: transactionsData, error: transactionsError, count } = await query;
-          
-        if (transactionsError) throw transactionsError;
-        
-        setEarningsData(vendorData);
-        setTransactions(transactionsData || []);
-        setTotalPages(Math.ceil((count || 0) / ITEMS_PER_PAGE));
+        const { data: earnings, error: earningsError, count: totalCount } = await query
+          .range(startIndex, endIndex);
+
+        if (earningsError) {
+          console.error('Error fetching earnings:', earningsError);
+          throw new Error('Failed to fetch earnings data');
+        }
+
+        // Calculate totals for all earnings (not date filtered)
+        const { data: allEarnings, error: totalsError } = await supabase
+          .from('vendor_earnings')
+          .select('amount, fee, net_amount, status')
+          .eq('vendor_id', user.id);
+
+        if (totalsError) {
+          console.error('Error fetching totals:', totalsError);
+        }
+
+        // Calculate summary data
+        const totalEarnings = allEarnings?.reduce((sum, earning) => sum + (earning.amount || 0), 0) || 0;
+        const totalFees = allEarnings?.reduce((sum, earning) => sum + (earning.fee || 0), 0) || 0;
+        const netEarnings = allEarnings?.reduce((sum, earning) => sum + (earning.net_amount || 0), 0) || 0;
+        const pendingEarnings = allEarnings?.filter(e => e.status === 'pending')
+          .reduce((sum, earning) => sum + (earning.net_amount || 0), 0) || 0;
+
+        setEarningsData({
+          balance: vendorData?.balance || 0,
+          totalEarnings: vendorData?.total_earnings || totalEarnings,
+          totalFees,
+          netEarnings,
+          pendingEarnings,
+          lastPayoutDate: vendorData?.last_payout_date,
+          lastPayoutAmount: vendorData?.last_payout_amount || 0
+        });
+
+        setTransactions(earnings || []);
+        setTotalPages(Math.ceil((totalCount || 0) / ITEMS_PER_PAGE));
+
       } catch (err) {
         console.error('Error fetching earnings data:', err);
         setError(t('vendor.failed_to_load_earnings'));
@@ -244,9 +298,8 @@ const EarningsPage = () => {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {transaction.description || t('vendor.order_earnings')}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {transaction.order_item_id ? `#${transaction.order_item_id.slice(0, 8)}` : '-'}
+                    </td>                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {transaction.order_items?.orders?.id ? `#${transaction.order_items.orders.id.slice(-8)}` : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatCurrency(transaction.amount)}

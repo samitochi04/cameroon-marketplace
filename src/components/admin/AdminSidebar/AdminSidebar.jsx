@@ -23,32 +23,32 @@ export const AdminSidebar = () => {
   const navItems = [
     {
       path: '/admin/dashboard',
-      name: t('dashboard'),
+      name: t('admin.admin_dashboard'),
       icon: <LayoutDashboard size={20} />,
     },
     {
       path: '/admin/users',
-      name: t('users'),
+      name: t('admin.users'),
       icon: <Users size={20} />,
     },
     {
       path: '/admin/vendors',
-      name: t('vendors'),
+      name: t('admin.vendors'),
       icon: <Store size={20} />,
     },
     {
       path: '/admin/products',
-      name: t('products'),
+      name: t('admin.products'),
       icon: <ShoppingBag size={20} />,
     },
     {
       path: '/admin/orders',
-      name: t('orders'),
+      name: t('admin.orders'),
       icon: <ClipboardList size={20} />,
     },
     {
       path: '/admin/settings',
-      name: t('settings'),
+      name: t('admin.settings'),
       icon: <Settings size={20} />,
     },
   ];

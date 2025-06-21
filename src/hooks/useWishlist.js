@@ -17,8 +17,7 @@ export const useWishlist = () => {
     }
 
     setIsLoading(true);
-    try {
-      const { data, error } = await supabase
+    try {      const { data, error } = await supabase
         .from('wishlists')
         .select(`
           id,
@@ -31,7 +30,8 @@ export const useWishlist = () => {
             sale_price,
             images,
             stock_quantity,
-            status
+            status,
+            vendor_id
           )
         `)
         .eq('user_id', user.id)
@@ -45,8 +45,7 @@ export const useWishlist = () => {
           message: 'Failed to load wishlist',
           type: 'error'
         });
-      } else {
-        // Process the data to include image URLs
+      } else {        // Process the data to include image URLs
         const processedItems = (data || []).map(item => {
           let imageArray = [];
           try {
@@ -59,6 +58,11 @@ export const useWishlist = () => {
             }
           } catch (e) {
             console.warn('Error parsing product images:', e);
+          }
+
+          // Log if vendor_id is missing for debugging
+          if (!item.products?.vendor_id) {
+            console.warn('Product missing vendor_id in wishlist:', item.products);
           }
 
           return {
@@ -140,9 +144,7 @@ export const useWishlist = () => {
           type: 'error'
         });
         return { success: false, message: error.message };
-      }
-
-      // Fetch the product details for the newly added item
+      }      // Fetch the product details for the newly added item
       const { data: productData, error: productError } = await supabase
         .from('products')
         .select(`
@@ -152,7 +154,8 @@ export const useWishlist = () => {
           sale_price,
           images,
           stock_quantity,
-          status
+          status,
+          vendor_id
         `)
         .eq('id', productId)
         .eq('status', 'published')

@@ -9,12 +9,12 @@ export const AuthDebug = () => {
   
   return (
     <div className="fixed bottom-4 right-4 z-50">
-      <button 
+      {/* <button 
         className="bg-gray-800 text-white text-xs px-2 py-1 rounded"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         Debug Auth
-      </button>
+      </button> */}
       
       {isExpanded && (
         <div className="bg-white border border-gray-300 rounded-md p-3 mt-1 shadow-lg max-w-md overflow-auto max-h-96">

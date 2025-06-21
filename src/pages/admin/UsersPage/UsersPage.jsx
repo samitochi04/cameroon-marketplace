@@ -121,8 +121,8 @@ export const UsersPage = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">{t("manage_users")}</h1>
-          <p className="text-gray-500">{t("view_and_manage_platform_users")}</p>
+          <h1 className="text-2xl font-bold">{t("admin.manage_users")}</h1>
+          <p className="text-gray-500">{t("admin.view_and_manage_platform_users")}</p>
         </div>
         
         <Button 
@@ -133,7 +133,7 @@ export const UsersPage = () => {
             setIsModalOpen(true);
           }}
         >
-          {t("add_user")}
+          {t("admin.add_user")}
         </Button>
       </div>
       
@@ -143,7 +143,7 @@ export const UsersPage = () => {
           {/* Search */}
           <form onSubmit={handleSearch} className="flex-1">
             <Input
-              placeholder={t("search_users")}
+              placeholder={t("admin.search_users")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               leftIcon={Search}
@@ -160,10 +160,10 @@ export const UsersPage = () => {
                 setCurrentPage(1);
               }}
               options={[
-                { value: "all", label: t("all_roles") },
-                { value: "admin", label: t("admin") },
-                { value: "vendor", label: t("vendor") },
-                { value: "customer", label: t("customer") },
+                { value: "all", label: t("admin.all_roles") },
+                { value: "admin", label: t("admin.admin") },
+                { value: "vendor", label: t("admin.vendor") },
+                { value: "customer", label: t("admin.customer") },
               ]}
             />
           </div>
@@ -177,9 +177,9 @@ export const UsersPage = () => {
                 setCurrentPage(1);
               }}
               options={[
-                { value: "all", label: t("all_statuses") },
-                { value: "active", label: t("active") },
-                { value: "disabled", label: t("disabled") },
+                { value: "all", label: t("admin.all_statuses") },
+                { value: "active", label: t("admin.active") },
+                { value: "disabled", label: t("admin.disabled") },
               ]}
             />
           </div>
@@ -192,7 +192,7 @@ export const UsersPage = () => {
               onClick={clearFilters}
               className="w-full md:w-auto"
             >
-              {t("clear_filters")}
+              {t("admin.clear_filters")}
             </Button>
           )}
         </div>
@@ -201,7 +201,7 @@ export const UsersPage = () => {
       {/* Results info */}
       <div>
         <p className="text-sm text-gray-500">
-          {t("showing_results", { count: users.length, total: totalCount })}
+          {t("admin.showing_results", { count: users.length, total: totalCount })}
         </p>
       </div>
       
@@ -219,13 +219,13 @@ export const UsersPage = () => {
             </h3>
             <p className="text-gray-500 text-center max-w-md mb-6">
               {searchQuery || roleFilter !== "all" || statusFilter !== "all"
-                ? t("no_users_with_filters")
-                : t("no_users_yet")}
+                ? t("admin.no_users_with_filters")
+                : t("admin.no_users_yet")}
             </p>
             
             {(roleFilter !== "all" || statusFilter !== "all" || searchQuery) && (
               <Button variant="outline" onClick={clearFilters}>
-                {t("clear_filters")}
+                {t("admin.clear_filters")}
               </Button>
             )}
           </div>

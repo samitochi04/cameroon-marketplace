@@ -1,5 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
+import { cn } from "@/utils/cn";
 
 export const Input = React.forwardRef(
   (
@@ -24,8 +25,15 @@ export const Input = React.forwardRef(
     },
     ref
   ) => {
-    // Generate an ID if one isn't provided
-    const inputId = id || name || React.useId();
+    // Generate an ID if one isn't provided - call useId unconditionally
+    const fallbackId = React.useId();
+    const inputId = id || name || fallbackId;
+
+    const hasLeftIcon = !!LeftIcon;
+    const hasRightIcon = !!RightIcon;
+
+    // Remove leftIcon and rightIcon from props to prevent them being passed to DOM
+    const { leftIcon, rightIcon, ...cleanProps } = props;
 
     return (
       <div className={`mb-4 ${className}`}>
@@ -40,41 +48,34 @@ export const Input = React.forwardRef(
         )}
 
         <div className="relative">
-          {LeftIcon && (
+          {hasLeftIcon && (
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <LeftIcon className="h-5 w-5 text-gray-400" />
+              {LeftIcon}
             </div>
-          )}
-
-          <input
+          )}          <input
             ref={ref}
             id={inputId}
             name={name}
             type={type}
-            className={`
-              w-full rounded-md shadow-sm border-gray-300
-              ${
-                error
-                  ? "border-red-500 ring-red-500"
-                  : "border-gray-300 focus:border-primary focus:ring-primary"
-              }
-              ${LeftIcon ? "pl-10" : ""}
-              ${RightIcon ? "pr-10" : ""}
-              ${disabled ? "bg-gray-100 cursor-not-allowed" : ""}
-              ${readOnly ? "bg-gray-50" : ""}
-            `}
+            className={cn(
+              "flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+              hasLeftIcon && "pl-10",
+              hasRightIcon && "pr-10",
+              error && "border-red-500 focus:ring-red-500",
+              className
+            )}
             placeholder={placeholder}
             disabled={disabled}
             readOnly={readOnly}
             onChange={onChange}
             onBlur={onBlur}
             value={value}
-            {...props}
+            {...cleanProps}
           />
 
-          {RightIcon && (
+          {hasRightIcon && (
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-              <RightIcon className="h-5 w-5 text-gray-400" />
+              {RightIcon}
             </div>
           )}
         </div>

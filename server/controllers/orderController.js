@@ -1,13 +1,17 @@
 const supabase = require(`../supabase/supabaseClient`);
 const { createCampayPayment } = require('../services/campayService');
+const emailService = require('../services/emailService');
+const stockService = require('../services/stockService');
 
 exports.createOrder = async (req, res) => {
     try {
         console.log('Received order data:', req.body);
         
+        // Get authenticated user ID from auth middleware
+        const userId = req.user.id;
+        
         // Extract required fields
         const { 
-            userId, 
             items, 
             shippingAddress, 
             billingAddress, 
@@ -75,15 +79,18 @@ exports.createOrder = async (req, res) => {
                 });
             }
         }
-        
-        // Calculate total if not provided
+          // Calculate total if not provided
         const total = totalAmount || subtotal + shipping;
         
-        // For development: simulate successful payment
-        const paymentStatus = paymentMethod === 'simulated_payment' ? 'completed' : 'pending';
-        const orderStatus = paymentMethod === 'simulated_payment' ? 'pending' : 'pending';
+        // Check if in development mode
+        const isDevelopmentMode = process.env.DEVELOPMENT_MODE === 'true';
         
-        // Create the order in database
+        // For development: simulate successful payment, for production: use real payment
+        const paymentStatus = isDevelopmentMode ? 'completed' : 'pending';
+        const orderStatus = isDevelopmentMode ? 'pending' : 'pending';
+        const paymentIntentId = isDevelopmentMode ? `sim_${Date.now()}` : null;
+        const orderNotes = isDevelopmentMode ? 'Development order - simulated payment' : null;
+          // Create the order in database
         const { data: order, error } = await supabase
             .from('orders')
             .insert([{ 
@@ -91,14 +98,14 @@ exports.createOrder = async (req, res) => {
                 shipping_address: shippingAddress,
                 billing_address: billingAddress || shippingAddress,
                 shipping_method: shippingMethod || 'standard',
-                payment_method: paymentMethod || 'simulated_payment',
+                payment_method: isDevelopmentMode ? 'simulated_payment' : (paymentMethod || 'campay'),
                 subtotal: Number(subtotal),
                 shipping_fee: Number(shipping),
                 total_amount: Number(total),
                 status: orderStatus,
                 payment_status: paymentStatus,
-                payment_intent_id: paymentMethod === 'simulated_payment' ? `sim_${Date.now()}` : null,
-                notes: paymentMethod === 'simulated_payment' ? 'Development order - simulated payment' : null
+                payment_intent_id: paymentIntentId,
+                notes: orderNotes
             }])
             .select()
             .single();
@@ -145,9 +152,44 @@ exports.createOrder = async (req, res) => {
                 message: 'Failed to save order items',
                 error: itemsError.message
             });
+        }        console.log('Created order items:', createdItems);
+        
+        // Update product stock and check for low stock notifications
+        try {
+            for (const item of createdItems) {
+                await stockService.updateProductStock(item.product_id, item.quantity);
+            }
+        } catch (stockError) {
+            console.error('Failed to update product stock:', stockError);
+            // Don't fail the order creation if stock update fails
         }
-
-        console.log('Created order items:', createdItems);
+        
+        // Send email notifications to vendors
+        try {
+            // Group items by vendor
+            const vendorGroups = {};
+            createdItems.forEach(item => {
+                if (!vendorGroups[item.vendor_id]) {
+                    vendorGroups[item.vendor_id] = [];
+                }
+                vendorGroups[item.vendor_id].push(item);
+            });
+            
+            // Send notification to each vendor
+            for (const vendorId of Object.keys(vendorGroups)) {
+                const vendorItems = vendorGroups[vendorId];
+                const vendorTotal = vendorItems.reduce((sum, item) => sum + item.total, 0);
+                
+                await emailService.sendNewOrderNotification(vendorId, order.id, {
+                    customer_name: 'Customer', // You might want to get actual customer name
+                    total_amount: vendorTotal,
+                    items_count: vendorItems.length
+                });
+            }
+        } catch (emailError) {
+            console.error('Failed to send email notifications:', emailError);
+            // Don't fail the order creation if email fails
+        }
         
         // Return success with the complete order
         return res.status(200).json({ 
@@ -173,7 +215,7 @@ exports.createOrder = async (req, res) => {
 exports.getOrderById = async (req, res) => {
     try {
         const { id } = req.params;
-        const { userId } = req.query; // Get userId from query params
+        const userId = req.user.id; // Get from authenticated user
         
         // Fetch order with user validation
         const { data: order, error: orderError } = await supabase
@@ -283,7 +325,7 @@ exports.getOrderById = async (req, res) => {
 // Get orders by user ID - ensure user can only see their own orders
 exports.getOrdersByUserId = async (req, res) => {
     try {
-        const { userId } = req.params;
+        const userId = req.user.id; // Get from authenticated user instead of params
         
         const { data: orders, error } = await supabase
             .from('orders')

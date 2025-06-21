@@ -17,8 +17,7 @@ export const SettingsPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
-  
-  // Get admin methods from hook
+    // Get admin methods from hook
   const { 
     getSettings, 
     updateSettings, 
@@ -28,6 +27,7 @@ export const SettingsPage = () => {
     updatePaymentSettings,
     getEmailTemplates,
     updateEmailTemplate,
+    emailTemplates: adminEmailTemplates,
     loading 
   } = useAdmin();
   
@@ -64,8 +64,7 @@ export const SettingsPage = () => {
       koraSecretKey: ""
     }
   });
-  
-  const [emailTemplates, setEmailTemplates] = useState([]);
+    const [emailTemplates, setEmailTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const emailForm = useForm({
     defaultValues: {
@@ -73,6 +72,23 @@ export const SettingsPage = () => {
       body: ""
     }
   });
+
+  // Initialize email templates from admin hook or defaults
+  useEffect(() => {
+    if (adminEmailTemplates && adminEmailTemplates.length > 0) {
+      setEmailTemplates(adminEmailTemplates);
+      if (!selectedTemplate && adminEmailTemplates[0]) {
+        setSelectedTemplate(adminEmailTemplates[0]);
+        emailForm.reset({
+          subject: adminEmailTemplates[0].subject || adminEmailTemplates[0].content?.split('\n')[0] || '',
+          body: adminEmailTemplates[0].body || adminEmailTemplates[0].content || ''
+        });
+      }
+    } else {
+      // Fallback to empty array if no templates
+      setEmailTemplates([]);
+    }
+  }, [adminEmailTemplates, selectedTemplate, emailForm]);
   
   // Load settings
   useEffect(() => {
@@ -112,15 +128,17 @@ export const SettingsPage = () => {
           koraPublicKey: paymentSettings.koraPublicKey || "",
           koraSecretKey: paymentSettings.koraSecretKey || ""
         });
+          // Load email templates - use the emailTemplates from state first
+        const templates = adminEmailTemplates && adminEmailTemplates.length > 0 
+          ? adminEmailTemplates 
+          : await getEmailTemplates().then(result => result.success ? result.data : []);
         
-        // Load email templates
-        const templates = await getEmailTemplates();
-        setEmailTemplates(templates);
+        setEmailTemplates(Array.isArray(templates) ? templates : []);
         if (templates.length > 0) {
           setSelectedTemplate(templates[0]);
           emailForm.reset({
-            subject: templates[0].subject,
-            body: templates[0].body
+            subject: templates[0].subject || templates[0].content?.split('\n')[0] || '',
+            body: templates[0].body || templates[0].content || ''
           });
         }
         

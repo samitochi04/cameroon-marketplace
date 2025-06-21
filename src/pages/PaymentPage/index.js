@@ -1,1 +1,1 @@
-export { PaymentPage as default } from './PaymentPage';
+export { default as PaymentPage } from './PaymentPage';

@@ -68,7 +68,7 @@ export const DashboardPage = () => {
     };
     
     fetchDashboardData();
-  }, [timeRange]);
+  }, [timeRange, getPlatformStats, getSalesData, getUserGrowthData, getRecentOrders, getTopVendors]);
   
   const handleTimeRangeChange = (e) => {
     setTimeRange(e.target.value);
@@ -86,10 +86,10 @@ export const DashboardPage = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">{t("admin_dashboard")}</h1>
+        <h1 className="text-2xl font-bold">{t("admin.admin_dashboard")}</h1>
         <div className="flex space-x-3">
           <Button as={Link} to="/admin/reports" variant="outline">
-            {t("view_reports")}
+            {t("admin.view_reports")}
           </Button>
         </div>
       </div>
@@ -97,7 +97,7 @@ export const DashboardPage = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
-          title={t("total_revenue")}
+          title={t("admin.total_revenue")}
           value={formatCurrency(stats.totalRevenue)}
           icon={DollarSign}
           change={stats.revenueChange}
@@ -106,7 +106,7 @@ export const DashboardPage = () => {
         />
         
         <StatsCard
-          title={t("total_orders")}
+          title={t("admin.total_orders")}
           value={stats.totalOrders.toString()}
           icon={ShoppingBag}
           change={stats.ordersChange}
@@ -115,7 +115,7 @@ export const DashboardPage = () => {
         />
         
         <StatsCard
-          title={t("users")}
+          title={t("admin.users")}
           value={stats.totalUsers.toString()}
           icon={Users}
           change={stats.usersChange}
@@ -124,7 +124,7 @@ export const DashboardPage = () => {
         />
         
         <StatsCard
-          title={t("vendors")}
+          title={t("admin.vendors")}
           value={stats.totalVendors.toString()}
           icon={Store}
           change={stats.vendorsChange}
@@ -136,15 +136,15 @@ export const DashboardPage = () => {
       {/* Revenue Chart */}
       <Card className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-lg font-medium">{t("revenue_overview")}</h2>
+          <h2 className="text-lg font-medium">{t("admin.revenue_overview")}</h2>
           <Select 
             value={timeRange}
             onChange={handleTimeRangeChange}
             options={[
-              { value: '7d', label: t('last_7_days') },
-              { value: '30d', label: t('last_30_days') },
-              { value: '90d', label: t('last_90_days') },
-              { value: '1y', label: t('last_year') },
+              { value: '7d', label: t('admin.last_7_days') },
+              { value: '30d', label: t('admin.last_30_days') },
+              { value: '90d', label: t('admin.last_90_days') },
+              { value: '1y', label: t('admin.last_year') },
             ]}
             className="w-40"
           />
@@ -157,7 +157,7 @@ export const DashboardPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* User Acquisition Chart */}
         <Card className="p-6">
-          <h2 className="text-lg font-medium mb-6">{t("user_acquisition")}</h2>
+          <h2 className="text-lg font-medium mb-6">{t("admin.user_acquisition")}</h2>
           <div className="h-64">
             <UserAcquisitionChart data={userGrowthData} />
           </div>
@@ -166,14 +166,14 @@ export const DashboardPage = () => {
         {/* Top Vendors */}
         <Card className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-medium">{t("top_performing_vendors")}</h2>
+            <h2 className="text-lg font-medium">{t("admin.top_performing_vendors")}</h2>
             <Button 
               as={Link} 
               to="/admin/vendors" 
               variant="link" 
               size="sm"
             >
-              {t("view_all")}
+              {t("admin.view_all")}
             </Button>
           </div>
           <TopVendorsTable vendors={topVendors} loading={loading} />
@@ -183,14 +183,14 @@ export const DashboardPage = () => {
       {/* Recent Orders */}
       <Card className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-lg font-medium">{t("recent_orders")}</h2>
+          <h2 className="text-lg font-medium">{t("admin.recent_orders")}</h2>
           <Button 
             as={Link} 
             to="/admin/orders" 
             variant="link" 
             size="sm"
           >
-            {t("view_all")}
+            {t("admin.view_all")}
           </Button>
         </div>
         <RecentOrdersTable orders={recentOrders} loading={loading} />

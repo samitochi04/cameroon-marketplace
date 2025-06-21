@@ -3,10 +3,10 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Package, MapPin, CreditCard, Truck, Calendar, Loader } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import axios from 'axios';
 
 const CustomerOrderDetail = () => {
   const { t } = useTranslation();
@@ -16,7 +16,6 @@ const CustomerOrderDetail = () => {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
   useEffect(() => {
     const fetchOrderDetails = async () => {
       if (!user?.id) {
@@ -29,23 +28,84 @@ const CustomerOrderDetail = () => {
         setLoading(true);
         setError(null);
         
-        // Include userId as query parameter for security
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/orders/${orderId}?userId=${user.id}`
-        );
-        
-        if (response.data?.success) {
-          setOrder(response.data.order);
-        } else {
-          setError(response.data?.message || t('orders.failed_to_load_orders'));
+        // Fetch order directly from Supabase
+        const { data: order, error: orderError } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('id', orderId)
+          .eq('user_id', user.id) // Ensure user can only see their own orders
+          .single();
+          
+        if (orderError || !order) {
+          setError(t('orders.order_not_found'));
+          setLoading(false);
+          return;
         }
+
+        // Fetch order items with product details
+        const { data: orderItems, error: itemsError } = await supabase
+          .from('order_items')
+          .select(`
+            *,
+            products!order_items_product_id_fkey (
+              id,
+              name,
+              images
+            )
+          `)
+          .eq('order_id', orderId)
+          .eq('user_id', user.id); // Ensure user can only see their own order items
+
+        // Process items to include image URLs and handle fallback
+        let processedItems = [];
+        if (orderItems && !itemsError) {
+          processedItems = orderItems.map(item => {
+            let imageArray = [];
+            try {
+              if (item.products?.images) {
+                if (typeof item.products.images === 'string') {
+                  imageArray = JSON.parse(item.products.images);
+                } else if (Array.isArray(item.products.images)) {
+                  imageArray = item.products.images;
+                }
+              }
+            } catch (e) {
+              console.warn("Error parsing product images:", e);
+            }
+            
+            return {
+              ...item,
+              name: item.products?.name || 'Product',
+              image: imageArray.length > 0 ? imageArray[0] : '/product-placeholder.jpg'
+            };
+          });
+        } else if (itemsError) {
+          console.warn('Error fetching order items:', itemsError);
+          // Fallback: fetch order items without product details
+          const { data: fallbackItems, error: fallbackError } = await supabase
+            .from('order_items')
+            .select('*')
+            .eq('order_id', orderId)
+            .eq('user_id', user.id);
+            
+          if (!fallbackError && fallbackItems) {
+            processedItems = fallbackItems.map(item => ({
+              ...item,
+              name: 'Product',
+              image: '/product-placeholder.jpg'
+            }));
+          }
+        }
+        
+        // Set the complete order with items
+        setOrder({
+          ...order,
+          items: processedItems
+        });
+        
       } catch (err) {
         console.error('Failed to fetch order details:', err);
-        if (err.response?.status === 404) {
-          setError(t('orders.order_not_found'));
-        } else {
-          setError(t('orders.failed_to_load_orders'));
-        }
+        setError(t('orders.failed_to_load_orders'));
       } finally {
         setLoading(false);
       }

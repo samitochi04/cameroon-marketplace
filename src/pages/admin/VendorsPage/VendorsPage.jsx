@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Search, Filter, AlertCircle, X, Check, Star } from "lucide-react";
+import { Search, AlertCircle, X, Check, Eye, Star } from "lucide-react";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -8,7 +8,7 @@ import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/common/Pagination";
-import { VendorModal } from "@/components/admin/modals/VendorModal";
+import { VendorApproval } from "@/components/admin/VendorApproval/VendorApproval";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export const VendorsPage = () => {
@@ -20,12 +20,10 @@ export const VendorsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [actionType, setActionType] = useState("");
-  
-  const { 
+    const { 
     getVendors, 
     approveVendor, 
-    rejectVendor, 
-    updateVendor,
+    rejectVendor,
     loading 
   } = useAdmin();
   
@@ -36,7 +34,7 @@ export const VendorsPage = () => {
   const [pendingCount, setPendingCount] = useState(0);
   
   // Load vendors with filters
-  const loadVendors = async () => {
+  const loadVendors = useCallback(async () => {
     try {
       const filters = {
         page: currentPage,
@@ -44,21 +42,25 @@ export const VendorsPage = () => {
         status: statusFilter !== "all" ? statusFilter : undefined,
         search: searchQuery || undefined,
       };
-      
+
       const { data, pagination } = await getVendors(filters);
       
-      setVendors(data);
-      setTotalPages(pagination.totalPages);
-      setTotalCount(pagination.totalCount);
-      setPendingCount(pagination.pendingCount);
+      setVendors(data || []);
+      setTotalPages(pagination?.totalPages || 1);
+      setTotalCount(pagination?.totalCount || 0);
+      
+      // Count pending vendors
+      const pending = data?.filter(v => v.status === 'pending').length || 0;
+      setPendingCount(pending);
     } catch (error) {
       console.error("Failed to load vendors:", error);
+      setVendors([]);
     }
-  };
+  }, [currentPage, statusFilter, searchQuery, getVendors]);
   
   useEffect(() => {
     loadVendors();
-  }, [currentPage, statusFilter]);
+  }, [loadVendors]);
   
   // Handle search
   const handleSearch = (e) => {
@@ -79,32 +81,19 @@ export const VendorsPage = () => {
     setActionType(action);
     setIsConfirmDialogOpen(true);
   };
-  
-  // Confirm action
+    // Confirm action
   const confirmAction = async () => {
     try {
       if (actionType === "approve") {
-        await approveVendor(selectedVendor.id);
+        await approveVendor(selectedVendor.id, { commissionRate: 10 });
       } else if (actionType === "reject") {
-        await rejectVendor(selectedVendor.id);
+        await rejectVendor(selectedVendor.id, "Application does not meet requirements");
       }
       
-      // Refresh the list
       loadVendors();
       setIsConfirmDialogOpen(false);
     } catch (error) {
       console.error(`Failed to ${actionType} vendor:`, error);
-    }
-  };
-  
-  // Handle vendor update from modal
-  const handleVendorUpdate = async (vendorData) => {
-    try {
-      await updateVendor(vendorData.id, vendorData);
-      loadVendors();
-      setIsModalOpen(false);
-    } catch (error) {
-      console.error("Failed to update vendor:", error);
     }
   };
   
@@ -119,14 +108,14 @@ export const VendorsPage = () => {
   // Get badge variant based on status
   const getStatusBadgeVariant = (status) => {
     switch (status) {
-      case "approved":
-        return "success";
-      case "pending":
-        return "warning";
-      case "rejected":
-        return "danger";
+      case 'approved':
+        return 'success';
+      case 'pending':
+        return 'warning';
+      case 'rejected':
+        return 'danger';
       default:
-        return "secondary";
+        return 'secondary';
     }
   };
   
@@ -134,8 +123,8 @@ export const VendorsPage = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">{t("manage_vendors")}</h1>
-          <p className="text-gray-500">{t("view_and_manage_platform_vendors")}</p>
+          <h1 className="text-2xl font-bold">{t("admin.manage_vendors")}</h1>
+          <p className="text-gray-500">{t("admin.view_and_manage_platform_vendors")}</p>
         </div>
         
         {pendingCount > 0 && (
@@ -154,7 +143,7 @@ export const VendorsPage = () => {
           {/* Search */}
           <form onSubmit={handleSearch} className="flex-1">
             <Input
-              placeholder={t("search_vendors")}
+              placeholder={t("admin.search_vendors")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               leftIcon={Search}
@@ -171,7 +160,7 @@ export const VendorsPage = () => {
                 setCurrentPage(1);
               }}
               options={[
-                { value: "all", label: t("all_statuses") },
+                { value: "all", label: t("admin.all_statuses") },
                 { value: "approved", label: t("approved") },
                 { value: "pending", label: t("pending") },
                 { value: "rejected", label: t("rejected") },
@@ -187,7 +176,7 @@ export const VendorsPage = () => {
               onClick={clearFilters}
               className="w-full md:w-auto"
             >
-              {t("clear_filters")}
+              {t("admin.clear_filters")}
             </Button>
           )}
         </div>
@@ -196,7 +185,7 @@ export const VendorsPage = () => {
       {/* Results info */}
       <div>
         <p className="text-sm text-gray-500">
-          {t("showing_results", { count: vendors.length, total: totalCount })}
+          {t("admin.showing_results", { count: vendors.length, total: totalCount })}
         </p>
       </div>
       
@@ -353,22 +342,14 @@ export const VendorsPage = () => {
         )}
       </Card>
       
-      {/* Vendor Detail Modal */}
-      <VendorModal 
+      {/* Vendor Approval Modal */}
+      <VendorApproval 
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={(refresh) => {
+          setIsModalOpen(false);
+          if (refresh) loadVendors();
+        }}
         vendor={selectedVendor}
-        onApprove={
-          selectedVendor?.status === "pending"
-            ? () => handleVendorAction(selectedVendor, "approve")
-            : undefined
-        }
-        onReject={
-          selectedVendor?.status === "pending"
-            ? () => handleVendorAction(selectedVendor, "reject")
-            : undefined
-        }
-        onSubmit={handleVendorUpdate}
       />
       
       {/* Confirm Dialog */}

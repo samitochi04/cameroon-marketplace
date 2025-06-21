@@ -41,12 +41,12 @@ import { SettingsPage } from '../pages/vendor/SettingsPage/SettingsPage';
 import EarningsPage from '../pages/vendor/EarningsPage/EarningsPage';
 
 // Admin Pages
-import AdminDashboard from '../pages/admin/Dashboard';
-import AdminUsers from '../pages/admin/Users';
-import AdminVendors from '../pages/admin/Vendors';
-import AdminProducts from '../pages/admin/Products';
-import AdminOrders from '../pages/admin/Orders';
-import AdminOrderDetail from '../pages/admin/OrderDetail';
+import { DashboardPage as AdminDashboard } from '../pages/admin/DashboardPage/DashboardPage';
+import { UsersPage as AdminUsers } from '../pages/admin/UsersPage/UsersPage';
+import { VendorsPage as AdminVendors } from '../pages/admin/VendorsPage/VendorsPage';
+import { ProductsPage as AdminProducts } from '../pages/admin/ProductsPage/ProductsPage';
+import { OrdersPage as AdminOrders } from '../pages/admin/OrdersPage/OrdersPage';
+import { CategoriesPage as AdminCategories } from '../pages/admin/CategoriesPage/CategoriesPage';
 import { SettingsPage as AdminSettings } from '../pages/admin/SettingsPage/SettingsPage';
 
 // Error Pages
@@ -55,7 +55,7 @@ import NotFoundPage from '../pages/NotFoundPage';
 // Import VendorsPage
 import VendorsPage from '../pages/VendorsPage/VendorsPage';
 
-// Import WishlistPage
+// Import WishlistPage  
 import WishlistPage from '../pages/WishlistPage';
 
 // Import UnauthorizedPage
@@ -120,8 +120,7 @@ const router = createBrowserRouter([
       { path: 'earnings', element: <EarningsPage /> },
     ],
   },
-  
-  // Admin routes
+    // Admin routes
   {
     path: '/admin',
     element: <AdminLayout />,
@@ -132,7 +131,7 @@ const router = createBrowserRouter([
       { path: 'vendors', element: <AdminVendors /> },
       { path: 'products', element: <AdminProducts /> },
       { path: 'orders', element: <AdminOrders /> },
-      { path: 'orders/:orderId', element: <AdminOrderDetail /> },
+      { path: 'categories', element: <AdminCategories /> },
       { path: 'settings', element: <AdminSettings /> },
     ],
   },

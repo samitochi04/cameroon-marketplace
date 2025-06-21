@@ -356,13 +356,13 @@ export const ProductDetailPage = () => {
 
             {/* Stock Status */}
             <div className="mb-4">
-              {product.stockQuantity > 0 ? (
+              {product.stock_quantity > 0 ? (
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   <span className="text-green-600 font-medium">{t('in_stock')}</span>
                   {product.stockQuantity <= 5 && (
                     <span className="text-orange-600 text-sm">
-                      {t('only_x_left', { count: product.stockQuantity })}
+                      {t('only_x_left', { count: product.stock_quantity })}
                     </span>
                   )}
                 </div>

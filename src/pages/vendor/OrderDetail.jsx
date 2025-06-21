@@ -9,40 +9,136 @@ import {
   ChevronDown,
   AlertTriangle,
   Truck,
-  CheckCircle
+  CheckCircle,
+  DollarSign,
+  Mail
 } from 'lucide-react';
-import { useApi } from '@/hooks/useApi';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
 const VendorOrderDetail = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { orderId } = useParams();
-  const { get, post } = useApi();
-  const [orderData, setOrderData] = useState(null);
+  const { orderId } = useParams();  const { user } = useAuth();
   const [vendorItems, setVendorItems] = useState([]);
   const [order, setOrder] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);  const [error, setError] = useState(null);
   const [itemStatusUpdating, setItemStatusUpdating] = useState({});
   const [showStatusDropdown, setShowStatusDropdown] = useState({});
+  const [payoutNotification, setPayoutNotification] = useState(null);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
+      if (!user?.id || !orderId) return;
+      
       try {
         setIsLoading(true);
-        // Fetch order details
-        const response = await get(`/orders/${orderId}`);
-        setOrderData(response.data);
-
-        // Extract the vendor's items from the order
-        const vendorId = localStorage.getItem('userId');
-        if (response.data && response.data.items) {
-          const items = response.data.items.filter(item => item.vendor_id === vendorId);
-          setVendorItems(items);
-          setOrder(response.data.order);
+        
+        // First, get the vendor's products to verify they have items in this order
+        const { data: vendorProducts, error: productsError } = await supabase
+          .from('products')
+          .select('id')
+          .eq('vendor_id', user.id);
+        
+        if (productsError) throw productsError;
+          if (!vendorProducts || vendorProducts.length === 0) {
+          setError('You have no products to display orders for.');
+          return;
         }
-      } catch (error) {
-        console.error('Failed to fetch order details:', error);
+        
+        const productIds = vendorProducts.map(p => p.id);        // Get the order items for this vendor's products in this specific order
+        const { data: orderItems, error: itemsError } = await supabase
+          .from('order_items')
+          .select(`
+            id,
+            order_id,
+            product_id,
+            quantity,
+            price,
+            total,
+            status
+          `)
+          .eq('order_id', orderId)
+          .in('product_id', productIds);
+        
+        if (itemsError) throw itemsError;
+        
+        if (!orderItems || orderItems.length === 0) {
+          setError('You have no items in this order.');
+          return;
+        }
+          // Get product details separately
+        const { data: productsData, error: productsDataError } = await supabase
+          .from('products')
+          .select('id, name, images, vendor_id')
+          .in('id', productIds);
+        
+        if (productsDataError) throw productsDataError;
+          // Create a map of products for easy lookup
+        const productsMap = productsData?.reduce((acc, product) => {
+          acc[product.id] = product;
+          return acc;
+        }, {}) || {};
+        
+        // Get the order details
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .select(`
+            id,
+            user_id,
+            status,
+            total_amount,
+            payment_status,
+            payment_method,
+            shipping_address,
+            created_at,
+            profiles!inner (
+              id,
+              name,
+              email
+            )
+          `)
+          .eq('id', orderId)
+          .single();
+        
+        if (orderError) throw orderError;
+        
+        if (!orderData) {
+          setError(t('order_not_found'));
+          return;
+        }
+          // Set the data
+        setOrder({
+          id: orderData.id,
+          user_id: orderData.user_id,
+          status: orderData.status,
+          total_amount: orderData.total_amount,
+          payment_status: orderData.payment_status,
+          payment_method: orderData.payment_method,
+          shippingAddress: typeof orderData.shipping_address === 'string' 
+            ? JSON.parse(orderData.shipping_address) 
+            : orderData.shipping_address || {},
+          created_at: orderData.created_at,          customer: {
+            name: orderData.profiles?.name || 'Unknown Customer',
+            email: orderData.profiles?.email
+          }
+        });
+          setVendorItems(orderItems.map(item => ({
+          id: item.id,
+          product_id: item.product_id,
+          quantity: item.quantity,
+          price: item.price,
+          total: item.total,
+          status: item.status,
+          product: {
+            id: item.product_id,
+            name: productsMap[item.product_id]?.name || 'Unknown Product',
+            image: productsMap[item.product_id]?.images
+          }
+        })));
+        
+      } catch (err) {
+        console.error('Failed to fetch order details:', err);
         setError(t('failed_to_load_order_details'));
       } finally {
         setIsLoading(false);
@@ -50,7 +146,7 @@ const VendorOrderDetail = () => {
     };
     
     fetchOrderDetails();
-  }, [get, orderId, t]);
+  }, [user?.id, orderId, t]);
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -67,14 +163,32 @@ const VendorOrderDetail = () => {
       ...prev,
       [itemId]: !prev[itemId]
     }));
-  };
-
-  // Update item status
+  };  // Update item status
   const updateItemStatus = async (itemId, newStatus) => {
     try {
       setItemStatusUpdating(prev => ({ ...prev, [itemId]: true }));
       
-      await post(`/orders/items/${itemId}/status`, { status: newStatus });
+      // Get the auth token for API calls
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+      
+      // Call our authenticated backend API instead of direct Supabase
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/vendor/order-items/${itemId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}` // Send Supabase JWT token
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to update item status');
+      }
       
       // Update local state
       setVendorItems(prev => 
@@ -82,6 +196,60 @@ const VendorOrderDetail = () => {
           item.id === itemId ? { ...item, status: newStatus } : item
         )
       );
+        // Show success message if status changed to processing (payout triggered)
+      if (newStatus === 'processing') {
+        setPayoutNotification({
+          type: 'success',
+          message: 'Order updated to processing! Payout has been initiated and email notification sent.',
+          timestamp: Date.now()
+        });
+        
+        // Auto-hide notification after 10 seconds
+        setTimeout(() => {
+          setPayoutNotification(null);
+        }, 10000);
+      }
+        // Check if we need to update the overall order status
+      // Get all order items for this order to check their statuses
+      const { data: allOrderItems, error: fetchError } = await supabase
+        .from('order_items')
+        .select('id, status')
+        .eq('order_id', orderId);
+      
+      if (!fetchError && allOrderItems) {
+        // Update the statuses with the new status we just changed
+        const updatedStatuses = allOrderItems.map(item => 
+          item.id === itemId ? newStatus : item.status
+        );
+        
+        // Check if all items have the same status
+        const uniqueStatuses = [...new Set(updatedStatuses)];
+        
+        // If all items have the same status, update the order status
+        if (uniqueStatuses.length === 1) {
+          const orderStatus = uniqueStatuses[0];
+          
+          console.log(`All items have status: ${orderStatus}, updating order status`);
+          
+          const { error: orderUpdateError } = await supabase
+            .from('orders')
+            .update({ status: orderStatus })
+            .eq('id', orderId);
+          
+          if (!orderUpdateError) {
+            // Update local order state
+            setOrder(prev => ({
+              ...prev,
+              status: orderStatus
+            }));
+            console.log(`Order status updated to: ${orderStatus}`);
+          } else {
+            console.error('Failed to update order status:', orderUpdateError);
+          }
+        } else {
+          console.log(`Items have mixed statuses: ${uniqueStatuses.join(', ')}`);
+        }
+      }
       
       // Hide dropdown
       setShowStatusDropdown(prev => ({ ...prev, [itemId]: false }));
@@ -139,38 +307,56 @@ const VendorOrderDetail = () => {
         className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6"
       >
         <ArrowLeft className="h-4 w-4 mr-1" />
-        {t('back_to_orders')}
+        {t('orders.back_to_orders')}
       </button>
       
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">{t('order')} #{order.id.slice(0, 8)}</h1>
           <p className="text-gray-500">
-            {t('placed_on')} {new Date(order.created_at).toLocaleDateString()}
+            {t('orders.placed_on')} {new Date(order.created_at).toLocaleDateString()}
           </p>
         </div>
         
         <div className="mt-2 md:mt-0">
           <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-            order.payment_status === 'paid' ? 'bg-green-100 text-green-800' :
+            order.payment_status === 'completed' ? 'bg-green-100 text-green-800' :
             order.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
             'bg-red-100 text-red-800'
           }`}>
+            {t('orders.payment_status')}
+            {t(' : ')}
             {t(order.payment_status)}
-          </span>
-        </div>
+          </span>        </div>
       </div>
+      
+      {/* Payout Success Notification */}
+      {payoutNotification && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md mb-6 flex items-start">
+          <div className="flex">
+            <DollarSign className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium">Payout Processed!</p>
+              <p className="text-sm mt-1">{payoutNotification.message}</p>
+              <div className="flex items-center mt-2 text-sm">
+                <Mail className="h-4 w-4 mr-1" />
+                <span>Email notification sent to your registered email</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Your items section */}
       <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
-        <h2 className="text-lg font-semibold mb-4">{t('your_items')}</h2>
+        <h2 className="text-lg font-semibold mb-4">{t('orders.your_items')}</h2>
         
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('product')}
+                  {t('vendor.product')}
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('quantity')}
@@ -204,20 +390,10 @@ const VendorOrderDetail = () => {
                         <div className="h-10 w-10 bg-gray-200 rounded flex items-center justify-center">
                           <ShoppingBag className="h-5 w-5 text-gray-500" />
                         </div>
-                      )}
-                      <div className="ml-4">
+                      )}                      <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
                           {item.product?.name || t('unknown_product')}
                         </div>
-                        {item.variant && (
-                          <div className="text-xs text-gray-500">
-                            {Object.entries(item.variant).map(([key, value]) => (
-                              <span key={key}>
-                                {key}: {value}
-                              </span>
-                            )).join(', ')}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </td>
@@ -248,7 +424,7 @@ const VendorOrderDetail = () => {
                         className="text-primary hover:text-primary-dark flex items-center"
                         disabled={item.status === 'delivered' || item.status === 'cancelled'}
                       >
-                        {t('update_status')}
+                        {t('orders.update_status')}
                         <ChevronDown className="h-4 w-4 ml-1" />
                       </button>
                       
@@ -261,7 +437,7 @@ const VendorOrderDetail = () => {
                                 disabled={itemStatusUpdating[item.id]}
                                 className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                               >
-                                {t('mark_as_processing')}
+                                {t('orders.mark_as_processing')}
                               </button>
                             )}
                             
@@ -271,7 +447,7 @@ const VendorOrderDetail = () => {
                                 disabled={itemStatusUpdating[item.id]}
                                 className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                               >
-                                {t('mark_as_shipped')}
+                                {t('orders.mark_as_shipped')}
                               </button>
                             )}
                             
@@ -281,7 +457,7 @@ const VendorOrderDetail = () => {
                                 disabled={itemStatusUpdating[item.id]}
                                 className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                               >
-                                {t('mark_as_delivered')}
+                                {t('orders.mark_as_delivered')}
                               </button>
                             )}
                             
@@ -291,7 +467,7 @@ const VendorOrderDetail = () => {
                                 disabled={itemStatusUpdating[item.id]}
                                 className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                               >
-                                {t('cancel_item')}
+                                {t('orders.cancel_item')}
                               </button>
                             )}
                           </div>
@@ -312,7 +488,7 @@ const VendorOrderDetail = () => {
               <span>{formatCurrency(vendorSubtotal)}</span>
             </div>
             <div className="flex justify-between font-semibold text-lg">
-              <span>{t('your_total')}:</span>
+              <span>{t('orders.your_total')}:</span>
               <span>{formatCurrency(vendorSubtotal)}</span>
             </div>
           </div>
@@ -323,16 +499,15 @@ const VendorOrderDetail = () => {
       <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
         <div className="flex items-center mb-4">
           <MapPin className="h-5 w-5 text-gray-500" />
-          <h2 className="text-lg font-semibold ml-2">{t('shipping_information')}</h2>
-        </div>
-        
+          <h2 className="text-lg font-semibold ml-2">{t('orders.shipping_information')}</h2>
+        </div>        
         <div className="border-t border-gray-200 pt-4">
-          <p className="font-medium">{order.shippingAddress.fullName}</p>
-          <p className="text-gray-600">{order.shippingAddress.address}</p>
+          <p className="font-medium">{order.shippingAddress?.fullName || 'N/A'}</p>
+          <p className="text-gray-600">{order.shippingAddress?.address || 'N/A'}</p>
           <p className="text-gray-600">
-            {order.shippingAddress.city}, {order.shippingAddress.region}, {order.shippingAddress.country}
+            {order.shippingAddress?.city || 'N/A'}, {order.shippingAddress?.region || 'N/A'}, {order.shippingAddress?.country || 'N/A'}
           </p>
-          <p className="text-gray-600">{order.shippingAddress.phoneNumber}</p>
+          <p className="text-gray-600">{order.shippingAddress?.phoneNumber || 'N/A'}</p>
         </div>
       </div>
       
@@ -340,25 +515,25 @@ const VendorOrderDetail = () => {
       <div className="bg-white p-6 rounded-lg shadow-sm">
         <h2 className="text-lg font-semibold mb-4 flex items-center">
           <Truck className="h-5 w-5 text-gray-500 mr-2" />
-          {t('fulfillment_tips')}
+          {t('orders.fulfillment_tips')}
         </h2>
         
         <ul className="space-y-2 text-gray-600">
           <li className="flex items-start">
             <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mr-2" />
-            <span>{t('fulfillment_tip_1')}</span>
+            <span>{t('orders.fulfillment_tip_1')}</span>
           </li>
           <li className="flex items-start">
             <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mr-2" />
-            <span>{t('fulfillment_tip_2')}</span>
+            <span>{t('orders.fulfillment_tip_2')}</span>
           </li>
           <li className="flex items-start">
             <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mr-2" />
-            <span>{t('fulfillment_tip_3')}</span>
+            <span>{t('orders.fulfillment_tip_3')}</span>
           </li>
           <li className="flex items-start">
             <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mr-2" />
-            <span>{t('fulfillment_tip_4')}</span>
+            <span>{t('orders.fulfillment_tip_4')}</span>
           </li>
         </ul>
       </div>

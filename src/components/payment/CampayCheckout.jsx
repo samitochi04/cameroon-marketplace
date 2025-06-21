@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import axios from "axios"; // Use axios directly
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 export const CampayCheckout = ({ 
   amount, 
@@ -24,7 +25,6 @@ export const CampayCheckout = ({
   const [paymentData, setPaymentData] = useState(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [statusCheckInterval, setStatusCheckInterval] = useState(null);
-
   const initiatePayment = async () => {
     setLoading(true);
     setError(null);
@@ -36,6 +36,12 @@ export const CampayCheckout = ({
       : `237${cleanedPhone}`;
     
     try {
+      // Get the auth token for authenticated requests
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+      
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/payments/initialize`,
         {
@@ -55,6 +61,12 @@ export const CampayCheckout = ({
             payment_method: selectedPaymentMethod
           },
           vendor_id
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`, // Add auth header
+            'Content-Type': 'application/json'
+          }
         }
       );
 
@@ -102,9 +114,8 @@ export const CampayCheckout = ({
             setError(`Payment ${status.toLowerCase()}`);
           }
           // Continue checking if status is PENDING
-        }
-      } catch (error) {
-        console.error('Error checking payment status:', error);
+        }      } catch (statusError) {
+        console.error('Error checking payment status:', statusError);
       }
     }, 5000);
 
@@ -142,8 +153,8 @@ export const CampayCheckout = ({
         } else {
           setError('Payment is still pending. Please complete the transaction on your mobile device.');
         }
-      }
-    } catch (error) {
+      }    } catch (statusError) {
+      console.error('Error checking payment status:', statusError);
       setError('Failed to check payment status');
     } finally {
       setCheckingStatus(false);

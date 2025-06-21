@@ -4,15 +4,16 @@ import { useTranslation } from 'react-i18next';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
 import axios from 'axios'; // Import axios directly
 import React from 'react';
-import { Truck, Package } from 'lucide-react'; 
+import { Truck, Package } from 'lucide-react';
 
 import { ShippingMethod } from '@/components/checkout/ShippingMethod/ShippingMethod';
 import { CheckoutSteps } from '@/components/checkout/CheckoutSteps/CheckoutSteps';
 import { AddressForm } from '@/components/checkout/AddressForm/AddressForm';
 import { OrderReview } from '@/components/checkout/OrderReview/OrderReview';
-// import { PaymentMethod } from '@/components/checkout/PaymentMethod/PaymentMethod';
+import { PaymentMethod } from '@/components/checkout/PaymentMethod/PaymentMethod';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 
@@ -22,14 +23,13 @@ const SHIPPING_PRICES = {
   pickup: 0
 };
 
-const STEPS = ['address', 'shipping', 'review']; // Remove 'payment'
+const STEPS = ['address', 'shipping', 'review', 'payment']; // Add payment step back
 
 export const CheckoutPage = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(0);
+  const navigate = useNavigate();  const [currentStep, setCurrentStep] = useState(0);
   const [shippingMethod, setShippingMethod] = useState('standard');
-  // const [paymentMethod, setPaymentMethod] = useState('mtn_mobile_money');
+  const [paymentMethod, setPaymentMethod] = useState('mtn_mobile_money');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderError, setOrderError] = useState(null);
   const [shippingCost, setShippingCost] = useState(SHIPPING_PRICES.standard); // Default shipping cost
@@ -54,19 +54,17 @@ export const CheckoutPage = () => {
       },
     },
   });
-
   const { 
     cartItems, 
     subtotal, 
     total, 
     isEmpty, 
     clearCart,
-    appliedPromo,
     updateShipping,
     shipping
   } = useCart();
   
-  const { isAuthenticated, user, getToken } = useAuth(); // Add getToken if available
+  const { isAuthenticated, user } = useAuth();
 
   // Prefill form with user data if available
   useEffect(() => {
@@ -121,7 +119,6 @@ export const CheckoutPage = () => {
       window.scrollTo(0, 0);
     }
   };
-
   const handleShippingMethodChange = (method) => {
     setShippingMethod(method);
     // Update shipping cost based on selected method
@@ -134,9 +131,10 @@ export const CheckoutPage = () => {
     }
   };
 
-  // Remove handlePaymentMethodChange and PaymentMethod logic
-
-  // This function is called when the user clicks "Pay" on the review step
+  const handlePaymentMethodChange = (method) => {
+    setPaymentMethod(method);
+  };
+  // This function is called when the user clicks "Place Order" on the payment step
   const handlePay = async () => {
     setIsSubmitting(true);
     setOrderError(null);
@@ -145,6 +143,9 @@ export const CheckoutPage = () => {
     const billingAddress = formData.billingAddress.sameAsShipping
       ? { ...formData.shippingAddress }
       : { ...formData.billingAddress };
+
+    // Check if in development mode
+    const isDevelopmentMode = import.meta.env.VITE_DEVELOPMENT_MODE === 'true';
 
     // Prepare order data for backend
     const orderData = {
@@ -159,7 +160,7 @@ export const CheckoutPage = () => {
       shippingAddress: formData.shippingAddress,
       billingAddress: billingAddress,
       shippingMethod: shippingMethod,
-      paymentMethod: 'simulated_payment', // For development
+      paymentMethod: paymentMethod,
       subtotal: subtotal,
       shipping: shipping || 0,
       totalAmount: total
@@ -168,17 +169,41 @@ export const CheckoutPage = () => {
     try {
       console.log('Creating order:', orderData);
 
+      // Get auth token for authenticated request
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Authentication required');
+      }
+
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/orders`,
-        orderData
+        orderData,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        }
       );
       
       if (response.data?.success) {
-        // Clear cart after successful order
+        // Clear cart after successful order creation
         clearCart();
         
-        // Redirect to order confirmation
-        navigate(`/order-confirmation/${response.data.order.id}`);
+        // In development mode, go directly to confirmation
+        if (isDevelopmentMode) {
+          navigate(`/order-confirmation/${response.data.order.id}`);
+        } else {
+          // In production mode, redirect to payment page with order ID
+          navigate(`/payment/${response.data.order.id}`, {
+            state: {
+              orderId: response.data.order.id,
+              amount: total,
+              paymentMethod: paymentMethod,
+              customerInfo: formData.shippingAddress
+            }
+          });
+        }
       } else {
         setOrderError(response.data.message || 'Failed to create order.');
       }
@@ -190,7 +215,6 @@ export const CheckoutPage = () => {
       setIsSubmitting(false);
     }
   };
-
   // Determine if the current step is valid and can proceed
   const canProceed = () => {
     switch (currentStep) {
@@ -200,11 +224,12 @@ export const CheckoutPage = () => {
         return !!shippingMethod;
       case 2: // Review step
         return true;
+      case 3: // Payment step
+        return !!paymentMethod;
       default:
         return false;
     }
   };
-
   // Render the current step content
   const renderStepContent = () => {
     switch (currentStep) {
@@ -227,6 +252,15 @@ export const CheckoutPage = () => {
                 : methods.getValues('billingAddress')
             }
             shippingMethod={shippingMethod}
+            paymentMethod={paymentMethod}
+          />
+        );
+      case 3:
+        return (
+          <PaymentMethod 
+            selectedMethod={paymentMethod} 
+            onSelectMethod={handlePaymentMethodChange}
+            total={total}
           />
         );
       default:
@@ -253,13 +287,13 @@ export const CheckoutPage = () => {
           {orderError}
         </div>
       )}
-      
-      {/* Checkout steps */}
+        {/* Checkout steps */}
       <CheckoutSteps 
         steps={[
           t('address'),
           t('shipping'),
-          t('review')
+          t('review'),
+          t('payment')
         ]} 
         currentStep={currentStep} 
       />
@@ -291,8 +325,7 @@ export const CheckoutPage = () => {
                     className="ml-auto"
                   >
                     {t('continue')}
-                  </Button>
-                ) : (
+                  </Button>                ) : (
                   <Button 
                     variant="primary"
                     onClick={handlePay}
@@ -300,7 +333,7 @@ export const CheckoutPage = () => {
                     isLoading={isSubmitting}
                     className="ml-auto"
                   >
-                    {t('pay')}
+                    {t('place_order')}
                   </Button>
                 )}
               </div>

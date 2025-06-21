@@ -25,32 +25,32 @@ export const VendorSidebar = () => {
   const navItems = [
     { 
       path: '/vendor-portal/dashboard', 
-      name: t('dashboard'), 
+      name: t('vendor.dashboard.dashboard'), 
       icon: <LayoutDashboard size={20} /> 
     },
     { 
       path: '/vendor-portal/products', 
-      name: t('products'), 
+      name: t('vendor.dashboard.products'), 
       icon: <ShoppingBag size={20} /> 
     },
     { 
       path: '/vendor-portal/orders', 
-      name: t('orders'), 
+      name: t('vendor.dashboard.orders'), 
       icon: <ClipboardList size={20} /> 
     },
     { 
       path: '/vendor-portal/earnings', 
-      name: t('earnings'), 
+      name: t('vendor.dashboard.earnings'), 
       icon: <DollarSign size={20} /> 
     },
     { 
       path: '/vendor-portal/profile', 
-      name: t('store_profile'), 
+      name: t('vendor.dashboard.store_profile'), 
       icon: <User size={20} /> 
     },
     { 
       path: '/vendor-portal/settings', 
-      name: t('settings'), 
+      name: t('vendor.dashboard.settings'), 
       icon: <Settings size={20} /> 
     },
   ];
@@ -66,7 +66,7 @@ export const VendorSidebar = () => {
         }`}>
           {!collapsed && (
             <div className="font-semibold text-lg text-primary">
-              {t('vendor_portal')}
+              {t('vendor.dashboard.vendor_portal')}
             </div>
           )}
           
@@ -115,7 +115,7 @@ export const VendorSidebar = () => {
             className="flex items-center px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100"
           >
             <Package size={20} />
-            {!collapsed && <span className="ml-3">{t('visit_storefront')}</span>}
+            {!collapsed && <span className="ml-3">{t('vendor.dashboard.visit_storefront')}</span>}
           </NavLink>
         </div>
         
@@ -128,7 +128,7 @@ export const VendorSidebar = () => {
             className="flex items-center px-3 py-2 w-full rounded-md text-red-600 hover:bg-red-50"
           >
             <LogOut size={20} />
-            {!collapsed && <span className="ml-3">{t('logout')}</span>}
+            {!collapsed && <span className="ml-3">{t('vendor.dashboard.logout')}</span>}
           </button>
         </div>
       </div>

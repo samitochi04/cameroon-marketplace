@@ -175,15 +175,15 @@ export const OrdersPage = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">{t("manage_orders")}</h1>
-          <p className="text-gray-500">{t("manage_orders_description")}</p>
+          <h1 className="text-2xl font-bold">{t("admin.manage_orders")}</h1>
+          <p className="text-gray-500">{t("admin.manage_orders_description")}</p>
         </div>
         <Button
           onClick={handleExportOrders}
           leftIcon={Download}
           variant="outline"
         >
-          {t("export_orders")}
+          {t("admin.export_orders")}
         </Button>
       </div>
 
@@ -192,7 +192,7 @@ export const OrdersPage = () => {
         <div className="flex flex-col lg:flex-row gap-4">
           <form onSubmit={handleSearch} className="flex-1">
             <Input
-              placeholder={t("search_orders")}
+              placeholder={t("search.orders")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               leftIcon={Search}
