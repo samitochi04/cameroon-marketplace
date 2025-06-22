@@ -20,4 +20,15 @@ export default defineConfig({
       },
     },
   },
+  publicDir: 'public',
+  // Copy locales to build output
+  assetsInclude: ['**/*.json'],
+  experimental: {
+    renderBuiltUrl(filename) {
+      if (filename.includes('locales')) {
+        return '/locales/' + path.basename(filename)
+      }
+      return filename
+    }
+  },
 })

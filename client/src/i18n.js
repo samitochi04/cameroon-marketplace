@@ -18,9 +18,8 @@ i18n
     
     ns: ['common'],
     defaultNS: 'common',
-    
-    backend: {
-      loadPath: '/src/locales/{{lng}}/{{ns}}.json',
+      backend: {
+      loadPath: '/locales/{{lng}}/{{ns}}.json',
     },
     
     interpolation: {
