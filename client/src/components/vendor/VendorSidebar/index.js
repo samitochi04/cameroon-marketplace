@@ -1,0 +1,1 @@
+export { VendorSidebar } from './VendorSidebar';
