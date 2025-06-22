@@ -2,13 +2,13 @@
   "name": "cameroon-marketplace-api",
   "version": "1.0.0",
   "description": "Backend API for Cameroon Marketplace",
-  "main": "server.js",
-  "scripts": {
+  "main": "server.js",  "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "setup-env": "node scripts/setup-env.js"
+    "setup-env": "node scripts/setup-env.js",
+    "build": "npm install --production"
   },
   "keywords": [],
   "author": "",

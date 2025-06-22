@@ -8,7 +8,13 @@ const vendorRoutes = require('./routes/vendorRoutes');
 const cronJobService = require('./services/cronJobService');
 
 const app = express();
-app.use(cors());
+// Configure CORS with specific origin in production
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.FRONTEND_URL 
+    : 'http://ts4880w8k0kkok8ow4kg8os4.31.97.68.94.sslip.io',
+  credentials: true
+}));
 app.use(express.json());
 
 // Routes
