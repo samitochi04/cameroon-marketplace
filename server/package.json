@@ -2,18 +2,19 @@
   "name": "cameroon-marketplace-api",
   "version": "1.0.0",
   "description": "Backend API for Cameroon Marketplace",
-  "main": "server.js",  "scripts": {
-    "start": "node index.js",
+  "main": "server.js",
+  "scripts": {
+    "start": "pm2-runtime start ecosystem.config.js --env production",
     "dev": "nodemon index.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "setup-env": "node scripts/setup-env.js",
-    "build": "npm install --production"
+    "build": "npm install --production && npm install pm2"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
-  "dependencies": {
+  "license": "ISC",  "dependencies": {
+    "pm2": "^5.3.1",
     "@supabase/supabase-js": "^2.39.7",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
