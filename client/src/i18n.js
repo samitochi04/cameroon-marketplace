@@ -3,10 +3,8 @@ import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import Backend from 'i18next-http-backend';
 
-// Temporary
-import.meta.env.DEV = false;
 // Environment variable for development
-const isDev = import.meta.env.DEV;
+const isDev = import.meta.env.MODE === 'development';
 
 i18n
   .use(Backend)

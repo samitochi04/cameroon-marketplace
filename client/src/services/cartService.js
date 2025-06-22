@@ -6,10 +6,12 @@ import { supabase } from "@/utils/supabase";
 export const cartService = {
   /**
    * Get cart from local storage
-   */
-  getLocalCart() {
+   */  getLocalCart() {
     try {
-      const cart = localStorage.getItem("cart");
+      if (typeof window === 'undefined' || !window.localStorage) {
+        return { items: [], lastUpdated: new Date().toISOString() };
+      }
+      const cart = window.localStorage.getItem("cart");
       return cart ? JSON.parse(cart) : { items: [], lastUpdated: new Date().toISOString() };
     } catch (error) {
       console.error("Error getting cart from localStorage:", error);
@@ -19,12 +21,14 @@ export const cartService = {
 
   /**
    * Save cart to local storage
-   */
-  saveLocalCart(cart) {
+   */  saveLocalCart(cart) {
     try {
+      if (typeof window === 'undefined' || !window.localStorage) {
+        return;
+      }
       // Update the lastUpdated timestamp
       cart.lastUpdated = new Date().toISOString();
-      localStorage.setItem("cart", JSON.stringify(cart));
+      window.localStorage.setItem("cart", JSON.stringify(cart));
     } catch (error) {
       console.error("Error saving cart to localStorage:", error);
     }

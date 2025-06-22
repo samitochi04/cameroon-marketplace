@@ -27,8 +27,15 @@ export const CartProvider = ({ children }) => {
     const syncCart = async () => {
       syncAttempted.current = true;
       try {
+        // Check for window/localStorage availability
+        if (typeof window === 'undefined' || !window.localStorage) {
+          setCartItems([]);
+          setIsCartLoaded(true);
+          return;
+        }
+        
         // Use local storage cart regardless of auth state
-        const savedCart = localStorage.getItem("cart");
+        const savedCart = window.localStorage.getItem("cart");
         if (savedCart) {
           try {
             const parsedCart = JSON.parse(savedCart);
@@ -74,7 +81,7 @@ export const CartProvider = ({ children }) => {
       console.error("Product missing vendor_id:", product);
       
       // In development mode, allow adding products without vendor_id with a default value
-      if (import.meta.env.VITE_DEVELOPMENT_MODE === 'true' || import.meta.env.DEV) {
+      if (import.meta.env.MODE === 'development' || import.meta.env.VITE_DEVELOPMENT_MODE === 'true') {
         console.warn("Development mode: Adding product without vendor_id, using default");
         product.vendor_id = 'default-vendor'; // Temporary fallback for development
       } else {
