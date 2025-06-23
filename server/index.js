@@ -8,17 +8,20 @@ const vendorRoutes = require('./routes/vendorRoutes');
 const cronJobService = require('./services/cronJobService');
 
 const app = express();
-// Configure CORS for specific origins
-app.use(cors({
-  origin: [
-    'http://ts4880w8k0kkok8ow4kg8os4.31.97.68.94.sslip.io',
-    'http://wc8ckowgg08wk40og04kwk4o.31.97.68.94.sslip.io'
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-  optionsSuccessStatus: 200
-}));
+
+// Enable CORS with more permissive options
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
 app.use(express.json());
 
 // Routes
