@@ -406,6 +406,7 @@ export const HomePage = () => {
                   src="/special-offer.jpg"
                   alt="Special offer"
                   className="w-full h-full object-cover"
+                  onError={(e) => { e.target.style.display = 'none' }}
                 />
               </div>
             </div>

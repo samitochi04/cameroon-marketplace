@@ -18,10 +18,10 @@ export default defineConfig({
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
         },
-        // Ensure assets use absolute paths
-        assetFileNames: 'assets/[name]-[hash][extname]',
-        chunkFileNames: 'assets/[name]-[hash].js',
-        entryFileNames: 'assets/[name]-[hash].js',
+        // Force absolute paths for all assets
+        assetFileNames: '/assets/[name]-[hash][extname]',
+        chunkFileNames: '/assets/[name]-[hash].js',
+        entryFileNames: '/assets/[name]-[hash].js',
       },
     },
   },
@@ -29,11 +29,15 @@ export default defineConfig({
   // Copy locales to build output
   assetsInclude: ['**/*.json'],
   experimental: {
-    renderBuiltUrl(filename) {
+    renderBuiltUrl(filename, { hostType }) {
+      // Always return absolute paths
+      if (hostType === 'html') {
+        return '/' + filename;
+      }
       if (filename.includes('locales')) {
         return '/locales/' + path.basename(filename)
       }
-      return filename
+      return '/' + filename
     }
   },
 })
