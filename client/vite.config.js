@@ -18,6 +18,10 @@ export default defineConfig({
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
         },
+        // Ensure assets use absolute paths
+        assetFileNames: 'assets/[name]-[hash][extname]',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
       },
     },
   },

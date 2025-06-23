@@ -61,97 +61,83 @@ import WishlistPage from '../pages/WishlistPage';
 // Import UnauthorizedPage
 import UnauthorizedPage from '../pages/UnauthorizedPage';
 
-// Add basename calculation function
-const getBasename = () => {
-  if (window.location.pathname.startsWith('/vendor-portal')) return '/vendor-portal';
-  if (window.location.pathname.startsWith('/admin')) return '/admin';
-  if (window.location.pathname.startsWith('/account')) return '/account';
-  return '/';
-};
-
-// Create router with dynamic basename
-const createRouterWithBasename = () => {
-  return createBrowserRouter([
-    {
-      path: '/',
-      element: <MainLayout />,
-      errorElement: <NotFoundPage />,
-      children: [
-        { index: true, element: <HomePage /> },
-        { path: 'products', element: <ProductListPage /> },
-        { path: 'categories', element: <CategoryPage /> }, // Show all categories
-        { path: 'category/:slug', element: <CategoryPage /> }, // Show specific category
-        { path: 'products/:id', element: <ProductDetailPage /> }, // Changed from slug to id
-        { path: 'vendors', element: <VendorsPage /> }, // Show all vendors
-        { path: 'vendor/:id', element: <VendorStorePage /> }, // Show specific vendor
-        { path: 'cart', element: <CartPage /> },
-        { path: 'wishlist', element: <WishlistPage /> }, // Add wishlist route
-        { path: 'checkout', element: <CheckoutPage /> },
-        { path: 'payment/:orderId', element: <PaymentPage /> },
-        { path: 'order-confirmation/:orderId', element: <OrderConfirmationPage /> },
-        { path: 'login', element: <LoginPage /> },
-        { path: 'register', element: <RegisterPage /> },
-        { path: 'forgot-password', element: <ForgotPasswordPage /> },
-        { path: 'reset-password', element: <ResetPasswordPage /> },
-        { path: 'auth/callback', element: <AuthCallbackPage /> },
-        { path: 'auth/test', element: <RegisterTestPage /> }, // Add our test page
-        
-        // Customer routes
-        {
-          path: 'account',
-          children: [
-            { index: true, element: <Navigate to="/account/dashboard" replace /> },
-            { path: 'dashboard', element: <CustomerDashboard /> },
-            { path: 'orders', element: <CustomerOrders /> },
-            { path: 'orders/:orderId', element: <CustomerOrderDetail /> },
-            { path: 'profile', element: <CustomerProfile /> },
-          ],
-        },
-        
-        // Add the unauthorized route
-        { path: 'unauthorized', element: <UnauthorizedPage /> },
-      ],
-    },
-    
-    // Vendor routes
-    {
-      path: '/vendor-portal',
-      element: <VendorLayout />,
-      children: [
-        { index: true, element: <Navigate to="/vendor-portal/dashboard" replace /> },
-        { path: 'dashboard', element: <VendorDashboard /> },
-        { path: 'products', element: <VendorProducts /> },
-        { path: 'products/new', element: <ProductFormPage /> },
-        { path: 'products/edit/:id', element: <ProductFormPage /> },
-        { path: 'orders', element: <VendorOrders /> },
-        { path: 'orders/:orderId', element: <VendorOrderDetail /> },
-        { path: 'profile', element: <VendorProfile /> },
-        { path: 'settings', element: <SettingsPage /> },
-        { path: 'earnings', element: <EarningsPage /> },
-      ],
-    },
-      // Admin routes
-    {
-      path: '/admin',
-      element: <AdminLayout />,
-      children: [
-        { index: true, element: <Navigate to="/admin/dashboard" replace /> },
-        { path: 'dashboard', element: <AdminDashboard /> },
-        { path: 'users', element: <AdminUsers /> },
-        { path: 'vendors', element: <AdminVendors /> },
-        { path: 'products', element: <AdminProducts /> },
-        { path: 'orders', element: <AdminOrders /> },
-        { path: 'categories', element: <AdminCategories /> },
-        { path: 'settings', element: <AdminSettings /> },
-      ],
-    },
-  ], { 
-    basename: getBasename() 
-  });
-};
-
-// Create router instance
-const router = createRouterWithBasename();
+// Remove the dynamic basename - serve everything from root
+const router = createBrowserRouter([
+  // Main app routes (no prefix)
+  {
+    path: '/',
+    element: <MainLayout />,
+    errorElement: <NotFoundPage />,
+    children: [
+      { index: true, element: <HomePage /> },
+      { path: 'products', element: <ProductListPage /> },
+      { path: 'categories', element: <CategoryPage /> },
+      { path: 'category/:slug', element: <CategoryPage /> },
+      { path: 'products/:id', element: <ProductDetailPage /> },
+      { path: 'vendors', element: <VendorsPage /> },
+      { path: 'vendor/:id', element: <VendorStorePage /> },
+      { path: 'cart', element: <CartPage /> },
+      { path: 'wishlist', element: <WishlistPage /> },
+      { path: 'checkout', element: <CheckoutPage /> },
+      { path: 'payment/:orderId', element: <PaymentPage /> },
+      { path: 'order-confirmation/:orderId', element: <OrderConfirmationPage /> },
+      { path: 'login', element: <LoginPage /> },
+      { path: 'register', element: <RegisterPage /> },
+      { path: 'forgot-password', element: <ForgotPasswordPage /> },
+      { path: 'reset-password', element: <ResetPasswordPage /> },
+      { path: 'auth/callback', element: <AuthCallbackPage /> },
+      { path: 'auth/test', element: <RegisterTestPage /> },
+      
+      // Customer routes (nested under account)
+      {
+        path: 'account',
+        children: [
+          { index: true, element: <Navigate to="/account/dashboard" replace /> },
+          { path: 'dashboard', element: <CustomerDashboard /> },
+          { path: 'orders', element: <CustomerOrders /> },
+          { path: 'orders/:orderId', element: <CustomerOrderDetail /> },
+          { path: 'profile', element: <CustomerProfile /> },
+        ],
+      },
+      
+      { path: 'unauthorized', element: <UnauthorizedPage /> },
+    ],
+  },
+  
+  // Vendor routes (with /vendor-portal prefix)
+  {
+    path: '/vendor-portal',
+    element: <VendorLayout />,
+    children: [
+      { index: true, element: <Navigate to="/vendor-portal/dashboard" replace /> },
+      { path: 'dashboard', element: <VendorDashboard /> },
+      { path: 'products', element: <VendorProducts /> },
+      { path: 'products/new', element: <ProductFormPage /> },
+      { path: 'products/edit/:id', element: <ProductFormPage /> },
+      { path: 'orders', element: <VendorOrders /> },
+      { path: 'orders/:orderId', element: <VendorOrderDetail /> },
+      { path: 'profile', element: <VendorProfile /> },
+      { path: 'settings', element: <SettingsPage /> },
+      { path: 'earnings', element: <EarningsPage /> },
+    ],
+  },
+  
+  // Admin routes (with /admin prefix)
+  {
+    path: '/admin',
+    element: <AdminLayout />,
+    children: [
+      { index: true, element: <Navigate to="/admin/dashboard" replace /> },
+      { path: 'dashboard', element: <AdminDashboard /> },
+      { path: 'users', element: <AdminUsers /> },
+      { path: 'vendors', element: <AdminVendors /> },
+      { path: 'products', element: <AdminProducts /> },
+      { path: 'orders', element: <AdminOrders /> },
+      { path: 'categories', element: <AdminCategories /> },
+      { path: 'settings', element: <AdminSettings /> },
+    ],
+  },
+]);
 
 export { router };
 
