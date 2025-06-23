@@ -8,14 +8,16 @@ const vendorRoutes = require('./routes/vendorRoutes');
 const cronJobService = require('./services/cronJobService');
 
 const app = express();
-// Configure CORS for specific origin
+// Configure CORS for specific origins
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL 
-    : 'http://ts4880w8k0kkok8ow4kg8os4.31.97.68.94.sslip.io',
+  origin: [
+    'http://ts4880w8k0kkok8ow4kg8os4.31.97.68.94.sslip.io',
+    'http://wc8ckowgg08wk40og04kwk4o.31.97.68.94.sslip.io'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  credentials: true,
+  optionsSuccessStatus: 200
 }));
 app.use(express.json());
 
