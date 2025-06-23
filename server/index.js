@@ -9,29 +9,14 @@ const cronJobService = require('./services/cronJobService');
 
 const app = express();
 
-// CORS configuration based on StackOverflow solutions
+// Simplified CORS configuration
 app.use(cors({
-  origin: ['http://ts4880w8k0kkok8ow4kg8os4.31.97.68.94.sslip.io', 'http://wc8ckowgg08wk40og04kwk4o.31.97.68.94.sslip.io'],
+  origin: true, // Allow all origins in development
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
-  preflightContinue: false,
-  optionsSuccessStatus: 204
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Add additional headers middleware
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Credentials', true);
-  res.header('Access-Control-Allow-Origin', req.headers.origin);
-  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  
-  // Handle preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
-  next();
-});
 app.use(express.json());
 
 // Routes
