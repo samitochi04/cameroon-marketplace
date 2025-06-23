@@ -18,10 +18,10 @@ export default defineConfig({
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
         },
-        // Force absolute paths for all assets
-        assetFileNames: '/assets/[name]-[hash][extname]',
-        chunkFileNames: '/assets/[name]-[hash].js',
-        entryFileNames: '/assets/[name]-[hash].js',
+        // Remove leading slashes - Rollup will handle the base path
+        assetFileNames: 'assets/[name]-[hash][extname]',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
       },
     },
   },
@@ -30,13 +30,11 @@ export default defineConfig({
   assetsInclude: ['**/*.json'],
   experimental: {
     renderBuiltUrl(filename, { hostType }) {
-      // Always return absolute paths
-      if (hostType === 'html') {
-        return '/' + filename;
-      }
+      // Return relative paths, Vite will handle the base
       if (filename.includes('locales')) {
         return '/locales/' + path.basename(filename)
       }
+      // For assets, return with leading slash for absolute paths
       return '/' + filename
     }
   },
