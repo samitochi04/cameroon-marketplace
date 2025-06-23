@@ -9,18 +9,28 @@ const cronJobService = require('./services/cronJobService');
 
 const app = express();
 
-// Enable CORS with more permissive options
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
+// CORS configuration based on StackOverflow solutions
+app.use(cors({
+  origin: ['http://ts4880w8k0kkok8ow4kg8os4.31.97.68.94.sslip.io', 'http://wc8ckowgg08wk40og04kwk4o.31.97.68.94.sslip.io'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+}));
 
-  // Handle preflight requests
+// Add additional headers middleware
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Credentials', true);
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Handle preflight
   if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
+    return res.status(204).end();
   }
+  next();
 });
 app.use(express.json());
 
