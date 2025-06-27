@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <!-- Public Pages -->
+  <url><loc>https://axis.nice-app.fr/</loc></url>
+  <url><loc>https://axis.nice-app.fr/products</loc></url>
+  <url><loc>https://axis.nice-app.fr/categories</loc></url>
+  <url><loc>https://axis.nice-app.fr/vendors</loc></url>
+  <url><loc>https://axis.nice-app.fr/cart</loc></url>
+  <url><loc>https://axis.nice-app.fr/wishlist</loc></url>
+  <url><loc>https://axis.nice-app.fr/checkout</loc></url>
+  <url><loc>https://axis.nice-app.fr/login</loc></url>
+  <url><loc>https://axis.nice-app.fr/register</loc></url>
+  <url><loc>https://axis.nice-app.fr/forgot-password</loc></url>
+  <url><loc>https://axis.nice-app.fr/reset-password</loc></url>
+
+  <!-- Customer Account Pages -->
+  <url><loc>https://axis.nice-app.fr/account/dashboard</loc></url>
+  <url><loc>https://axis.nice-app.fr/account/orders</loc></url>
+  <url><loc>https://axis.nice-app.fr/account/profile</loc></url>
+
+</urlset>
