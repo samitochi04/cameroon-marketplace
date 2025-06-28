@@ -11,9 +11,9 @@ i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    lng: 'en',
-    fallbackLng: 'en',
-    supportedLngs: ['en', 'fr'],
+    lng: 'fr',
+    fallbackLng: 'fr',
+    supportedLngs: ['fr', 'en'],
     debug: isDev,
     
     ns: ['common'],

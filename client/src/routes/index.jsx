@@ -62,6 +62,13 @@ import WishlistPage from '../pages/WishlistPage';
 // Import UnauthorizedPage
 import UnauthorizedPage from '../pages/UnauthorizedPage';
 
+// Import footer pages
+import TermsConditionsPage from '../pages/TermsConditions';
+import AboutPage from '../pages/About';
+import ContactPage from '../pages/Contact';
+import CareersPage from '../pages/Careers';
+import CustomerServicePage from '../pages/CustomerService';
+
 // Remove the dynamic basename - serve everything from root
 const router = createBrowserRouter([
   // Main app routes (no prefix)
@@ -88,6 +95,13 @@ const router = createBrowserRouter([
       { path: 'reset-password', element: <ResetPasswordPage /> },
       { path: 'auth/callback', element: <AuthCallbackPage /> },
       { path: 'auth/test', element: <RegisterTestPage /> },
+      
+      // Footer pages
+      { path: 'about', element: <AboutPage /> },
+      { path: 'contact', element: <ContactPage /> },
+      { path: 'careers', element: <CareersPage /> },
+      { path: 'terms-conditions', element: <TermsConditionsPage /> },
+      { path: 'customer-service', element: <CustomerServicePage /> },
       
       // Customer routes (nested under account)
       {
