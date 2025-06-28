@@ -39,21 +39,10 @@ const RegisterPage = () => {
     setError('');
     
     try {
-      console.log("Register form submitted with:", {
-        email: data.email,
-        name: data.name,
-        accountType: data.accountType
-      });
-      
       const result = await registerUser(data.email, data.password, {
         name: data.name,
         role: data.accountType
       });
-      
-      console.log("Registration result:", result);
-      
-      // For debugging - log the entire result
-      console.log("Full registration response:", JSON.stringify(result));
       
       // Show success message in French as requested
       setSuccessMessage("Votre compte à été créer avec succes");

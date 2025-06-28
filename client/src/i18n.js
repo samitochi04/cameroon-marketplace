@@ -14,7 +14,7 @@ i18n
     lng: 'fr',
     fallbackLng: 'fr',
     supportedLngs: ['fr', 'en'],
-    debug: isDev,
+    // debug: isDev,
     
     ns: ['common'],
     defaultNS: 'common',

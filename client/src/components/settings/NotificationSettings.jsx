@@ -18,8 +18,6 @@ export const NotificationSettings = ({ className = '' }) => {
   const handleSaveSettings = async () => {
     setLoading(true);
     try {
-      // Here you would save settings to your backend
-      console.log('Saving notification settings:', emailNotifications);
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));

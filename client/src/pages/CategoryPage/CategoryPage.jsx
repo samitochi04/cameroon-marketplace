@@ -84,7 +84,7 @@ export const CategoryPage = () => {
         // Fetch products
         let productsQuery = supabase
           .from('products')
-          .select('id, name, price, sale_price, images, stock_quantity, slug, vendor_id, status, description, category_id')
+          .select('id, name, sale_price, images, stock_quantity, slug, vendor_id, status, description, category_id')
           .eq('status', 'published')
           .order('created_at', { ascending: false });
 
@@ -138,14 +138,14 @@ export const CategoryPage = () => {
   const applyFiltersAndSort = (productsList = products) => {
     // Apply price filter
     let filtered = productsList.filter(product => {
-      const productPrice = product.sale_price || product.price;
+      const productPrice = product.sale_price;
       return productPrice >= priceRange.min && productPrice <= priceRange.max;
     });
     
     // Apply sorting
     filtered = [...filtered].sort((a, b) => {
-      const priceA = a.sale_price || a.price;
-      const priceB = b.sale_price || b.price;
+      const priceA = a.sale_price;
+      const priceB = b.sale_price;
       
       switch(sortBy) {
         case "price_low":
@@ -234,7 +234,7 @@ export const CategoryPage = () => {
       id: product.id,
       vendor_id: product.vendor_id,
       name: product.name,
-      price: product.sale_price || product.price,
+      price: product.sale_price,
       image: product.imageUrl,
       quantity: 1,
       stock_quantity: product.stock_quantity
@@ -315,13 +315,6 @@ export const CategoryPage = () => {
                     currency: 'XAF',
                     minimumFractionDigits: 0
                   }).format(product.sale_price)}
-                </span>
-                <span className="text-gray-400 text-sm line-through ml-2">
-                  {new Intl.NumberFormat('fr-CM', {
-                    style: 'currency',
-                    currency: 'XAF',
-                    minimumFractionDigits: 0
-                  }).format(product.price)}
                 </span>
               </>
             : new Intl.NumberFormat('fr-CM', {
@@ -540,7 +533,7 @@ export const CategoryPage = () => {
                   </div>
                 )}
 
-                {/* Price range filter */}
+                {/* Prices range filter */}
                 <div className="mb-6">
                   <h4 className="font-medium mb-3">{t("common.price_range")}</h4>
                   <div className="space-y-4">

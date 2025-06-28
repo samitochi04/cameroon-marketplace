@@ -21,8 +21,6 @@ const ContactPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Here you would normally send the data to your backend
-    console.log('Form submitted:', formData);
     setFormSubmitted(true);
     setFormData({
       name: '',

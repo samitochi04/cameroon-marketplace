@@ -4,7 +4,6 @@ import { supabase } from '@/lib/supabase';
  * Utility function to check if required tables exist and create them if needed
  */
 export const checkAndSetupDatabase = async () => {
-  console.log('Checking database setup...');
   
   try {
     // Check if profiles table exists
@@ -14,7 +13,6 @@ export const checkAndSetupDatabase = async () => {
       .limit(1);
     
     if (error && error.message.includes('does not exist')) {
-      console.log('Profiles table does not exist, creating now...');
       
       // Create the profiles table
       const { error: createError } = await supabase.rpc('create_profiles_table');
@@ -24,14 +22,12 @@ export const checkAndSetupDatabase = async () => {
         return false;
       }
       
-      console.log('Profiles table created successfully');
       return true;
     } else if (error) {
       console.error('Error checking profiles table:', error.message);
       return false;
     }
     
-    console.log('Database setup looks good!');
     return true;
   } catch (err) {
     console.error('Error setting up database:', err);

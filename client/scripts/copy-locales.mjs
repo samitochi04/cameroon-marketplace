@@ -30,9 +30,10 @@ async function copyLocales() {
       }
     }
     
-    console.log('✅ Locales copied successfully!');
   } catch (error) {
-    console.error('Error copying locales:', error);
+    if (import.meta.env.DEBUG_MODE === "true") {
+      console.error('Error copying locales:', error);
+    }
     process.exitCode = 1;
   }
 }

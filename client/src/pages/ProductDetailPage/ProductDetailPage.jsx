@@ -126,7 +126,7 @@ export const ProductDetailPage = () => {
       try {
         const { data, error } = await supabase
           .from('products')
-          .select('id, name, price, sale_price, images, slug')
+          .select('id, name, sale_price, images, slug')
           .eq('category_id', product.category_id)
           .eq('status', 'published')
           .neq('id', product.id)
@@ -184,7 +184,7 @@ export const ProductDetailPage = () => {
       id: product.id,
       vendor_id: product.vendor_id,
       name: product.name,
-      price: product.sale_price || product.price,
+      price: product.sale_price,
       image: product.images[0],
       quantity: quantity,
       stock_quantity: product.stock_quantity
@@ -246,7 +246,7 @@ export const ProductDetailPage = () => {
   };
 
   const getShareText = () => {
-    return `Check out this product: ${product.name} - ${formatCurrency(product.sale_price || product.price)}`;
+    return `Check out this product: ${product.name} - ${formatCurrency(product.sale_price)}`; 
   };
 
   const handleCopyLink = async () => {
@@ -350,21 +350,11 @@ export const ProductDetailPage = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
             
-            {/* Price */}
+            {/* Prices */}
             <div className="flex items-center space-x-4 mb-4">
               <span className="text-3xl font-bold text-primary">
-                {formatCurrency(product.sale_price || product.price)}
+                {formatCurrency(product.sale_price)}
               </span>
-              {product.sale_price && (
-                <span className="text-xl text-gray-500 line-through">
-                  {formatCurrency(product.price)}
-                </span>
-              )}
-              {product.sale_price && (
-                <Badge variant="error">
-                  {Math.round((1 - product.sale_price / product.price) * 100)}% {t('off')}
-                </Badge>
-              )}
             </div>
 
             {/* Stock Status */}
@@ -373,7 +363,7 @@ export const ProductDetailPage = () => {
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   <span className="text-green-600 font-medium">{t('in_stock')}</span>
-                  {product.stockQuantity <= 5 && (
+                  {product.stock_quantity <= 5 && (
                     <span className="text-orange-600 text-sm">
                       {t('only_x_left', { count: product.stock_quantity })}
                     </span>
@@ -412,7 +402,7 @@ export const ProductDetailPage = () => {
                   <span className="px-4 py-2 border-x">{quantity}</span>
                   <button
                     onClick={incrementQuantity}
-                    disabled={quantity >= product.stockQuantity}
+                    disabled={quantity >= product.stock_quantity}
                     className="p-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Plus className="w-4 h-4" />
@@ -424,7 +414,7 @@ export const ProductDetailPage = () => {
               <div className="flex space-x-4">
                 <Button
                   onClick={handleAddToCart}
-                  disabled={product.stockQuantity <= 0}
+                  disabled={product.stock_quantity <= 0}
                   className="flex-1 flex items-center justify-center"
                   size="lg"
                 >
@@ -586,7 +576,7 @@ export const ProductDetailPage = () => {
                     </Link>
                   </h3>
                   <div className="text-primary font-semibold">
-                    {formatCurrency(relatedProduct.sale_price || relatedProduct.price)}
+                    {formatCurrency(relatedProduct.sale_price)}
                   </div>
                 </div>
               </div>

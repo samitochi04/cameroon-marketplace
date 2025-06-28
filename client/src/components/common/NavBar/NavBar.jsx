@@ -43,13 +43,13 @@ export const NavBar = () => {
   }, []);
 
   // Debug user authentication state
-  useEffect(() => {
-    if (user) {
-      console.log("NavBar: User authenticated", user);
-    } else {
-      console.log("NavBar: User not authenticated");
-    }
-  }, [user]);
+  // useEffect(() => {
+  //   if (user) {
+  //     console.log("NavBar: User authenticated", user);
+  //   } else {
+  //     console.log("NavBar: User not authenticated");
+  //   }
+  // }, [user]);
 
   const handleSearch = (e) => {
     e.preventDefault();

@@ -10,11 +10,11 @@ export const VendorLayout = () => {
   const location = useLocation();
 
   // Debug - log the user object
-  useEffect(() => {
-    console.log("VendorLayout - User:", user);
-    console.log("VendorLayout - isAuthenticated:", isAuthenticated);
-    console.log("VendorLayout - user role:", user?.role);
-  }, [user, isAuthenticated]);
+  // useEffect(() => {
+  //   console.log("VendorLayout - User:", user);
+  //   console.log("VendorLayout - isAuthenticated:", isAuthenticated);
+  //   console.log("VendorLayout - user role:", user?.role);
+  // }, [user, isAuthenticated]);
 
   // Show loading state while checking auth
   if (authLoading || loading) {
@@ -27,7 +27,6 @@ export const VendorLayout = () => {
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
-    console.log("VendorLayout: Not authenticated, redirecting to login");
     return (
       <Navigate
         to={`/login?redirect=${encodeURIComponent(location.pathname)}`}
@@ -41,9 +40,6 @@ export const VendorLayout = () => {
 
   // Redirect to unauthorized if not a vendor
   if (!isVendor) {
-    console.log(
-      "VendorLayout: User is not vendor or admin, redirecting to unauthorized"
-    );
     return <Navigate to="/unauthorized" replace />;
   }
 

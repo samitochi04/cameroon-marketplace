@@ -205,10 +205,6 @@ const EarningsPage = () => {
         pendingEarnings: earningsData.pendingEarnings || 0,
         lastPayout: earningsData.lastPayoutAmount || 0
       };
-      
-      // You could emit an event or use a context if needed
-      // This is just here for reference
-      console.log('Updated vendor earnings data:', vendorEarningsData);
     }
   }, [earningsData]);
   

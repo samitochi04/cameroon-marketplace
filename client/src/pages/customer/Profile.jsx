@@ -43,7 +43,6 @@ const CustomerProfile = () => {
     setError('');
     
     try {
-      console.log('Submitting profile update:', data);
       await updateUserProfile({
         name: data.name,
         phonenumber: data.phonenumber,

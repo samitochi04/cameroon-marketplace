@@ -95,7 +95,6 @@ export const ProductFormPage = () => {
       const category = categories.find(c => c.id === categoryId);
       if (category) {
         const slug = generateSlug(`${category.name}-${productName}`);
-        console.log(`Generated slug: ${slug}`);
       }
     }
   }, [productName, categoryId, categories]);
@@ -192,8 +191,6 @@ export const ProductFormPage = () => {
         // Use the user ID from auth context
         const filePath = `${user.id}/products/${fileName}`;
         
-        console.log("Uploading to path:", filePath);
-        
         // Upload to Supabase Storage
         const { error: uploadError, data } = await supabase.storage
           .from('vendor-assets')  // Make sure this bucket exists
@@ -211,8 +208,6 @@ export const ProductFormPage = () => {
         const { data: urlData } = supabase.storage
           .from('vendor-assets')
           .getPublicUrl(filePath);
-        
-        console.log("Upload successful:", urlData);
         uploadedImages.push(urlData.publicUrl);
       }
       
@@ -255,8 +250,6 @@ export const ProductFormPage = () => {
         is_featured: data.isFeatured,
         images: images
       };
-      
-      console.log("Saving product:", productData);
       
       try {
         if (isEditing) {

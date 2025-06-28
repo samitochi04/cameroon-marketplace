@@ -168,7 +168,6 @@ const VendorOrderDetail = () => {
     try {
       setItemStatusUpdating(prev => ({ ...prev, [itemId]: true }));
       
-      console.log(`Updating item status for item ID: ${itemId} to ${newStatus}${retryCount > 0 ? ` (retry attempt ${retryCount})` : ''}`);
       
       // Get the auth token for API calls
       const { data: { session } } = await supabase.auth.getSession();
@@ -177,7 +176,11 @@ const VendorOrderDetail = () => {
       }
       
       const apiUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/vendor/order-items/${itemId}/status`;
-      console.log(`API URL: ${apiUrl}`);
+      
+      if (import.meta.env.DEBUG_MODE === "true") {
+        console.log(`API URL: ${apiUrl}`);
+      }
+      
       
       // Call our authenticated backend API instead of direct Supabase
       const response = await fetch(apiUrl, {
@@ -189,14 +192,11 @@ const VendorOrderDetail = () => {
         body: JSON.stringify({ status: newStatus })
       });
       
-      console.log(`API response status: ${response.status}`);
       const result = await response.json();
-      console.log('API response body:', result);
       
       if (!result.success) {
         // If this is a server error (500), retry up to 2 times
         if (response.status >= 500 && retryCount < 2) {
-          console.log(`Server error, retrying (${retryCount + 1}/2)...`);
           // Briefly release the updating state to show it's retrying
           setItemStatusUpdating(prev => ({ ...prev, [itemId]: false }));
           
@@ -261,8 +261,6 @@ const VendorOrderDetail = () => {
         if (uniqueStatuses.length === 1) {
           const orderStatus = uniqueStatuses[0];
           
-          console.log(`All items have status: ${orderStatus}, updating order status`);
-          
           const { error: orderUpdateError } = await supabase
             .from('orders')
             .update({ status: orderStatus })
@@ -274,12 +272,13 @@ const VendorOrderDetail = () => {
               ...prev,
               status: orderStatus
             }));
-            console.log(`Order status updated to: ${orderStatus}`);
           } else {
             console.error('Failed to update order status:', orderUpdateError);
           }
-        } else {
-          console.log(`Items have mixed statuses: ${uniqueStatuses.join(', ')}`);
+        } else { 
+          if (import.meta.env.DEBUG_MODE === "true") {
+            console.log(`Items have mixed statuses: ${uniqueStatuses.join(', ')}`);
+          }
         }
       }
       

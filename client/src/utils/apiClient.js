@@ -39,7 +39,10 @@ ApiClient.interceptors.response.use(
       // Handle 401 Unauthorized
       if (error.response.status === 401) {
         // Dispatch logout action or redirect to login
-        console.log('Unauthorized. Redirecting to login...');
+        if (import.meta.env.DEBUG_MODE === "true") {
+          console.log('Unauthorized. Redirecting to login...');
+        }
+        
         // You could trigger a logout/redirect here
       }
     } else if (error.request) {

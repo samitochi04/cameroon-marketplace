@@ -12,7 +12,7 @@ const app = express();
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? process.env.FRONTEND_URL 
-    : 'http://ts4880w8k0kkok8ow4kg8os4.31.97.68.94.sslip.io',
+    : 'https://axis.nice-app.fr',
   credentials: true
 }));
 app.use(express.json());

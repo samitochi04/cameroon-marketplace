@@ -44,7 +44,6 @@ const AuthCallbackPage = () => {
                 updated_at: new Date().toISOString()
               });
               
-              console.log('Created new profile for Google user');
             } else {
               // Update the existing profile with the latest Google data
               const name = user.user_metadata?.name || user.user_metadata?.full_name || existingProfile.name || '';
@@ -55,7 +54,6 @@ const AuthCallbackPage = () => {
                 updated_at: new Date().toISOString()
               }).eq('id', user.id);
               
-              console.log('Updated profile for Google user');
             }
           } catch (profileError) {
             console.error('Error updating profile from Google data:', profileError);

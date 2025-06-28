@@ -167,7 +167,6 @@ export const CheckoutPage = () => {
     };
 
     try {
-      console.log('Creating order:', orderData);
 
       // Get auth token for authenticated request
       const { data: { session } } = await supabase.auth.getSession();
@@ -349,7 +348,6 @@ export const CheckoutPage = () => {
             <h2 className="text-xl font-semibold mb-4">{t('checkout.order_summary', 'Order Summary')}</h2>
             
             <div className="space-y-2 border-b border-gray-200 pb-4 mb-4">
-              {console.log('cartItems:', JSON.stringify(cartItems, null, 2))}
               {cartItems.map(item => (
                 <div key={item.id} className="flex justify-between text-sm">
                   <div>

@@ -85,7 +85,7 @@ export const VendorStorePage = () => {
         // Fetch products for this vendor - exactly like HomePage.jsx
         const { data: productsData, error: productsError } = await supabase
           .from('products')
-          .select('id, name, price, sale_price, images, stock_quantity, slug, vendor_id, status, description, category_id')
+          .select('id, name, sale_price, images, stock_quantity, slug, vendor_id, status, description, category_id')
           .eq('vendor_id', vendor.id)
           .eq('status', 'published')
           .order('created_at', { ascending: false });
@@ -136,7 +136,7 @@ export const VendorStorePage = () => {
       id: product.id,
       vendor_id: product.vendor_id,
       name: product.name,
-      price: product.sale_price || product.price,
+      price: product.sale_price,
       image: product.imageUrl,
       quantity: 1,
       stock_quantity: product.stock_quantity
@@ -152,11 +152,6 @@ export const VendorStorePage = () => {
           alt={product.name} 
           className="w-full h-48 object-cover"
         />
-        {product.sale_price && (
-          <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
-            Sale
-          </div>
-        )}
       </div>
       <div className="p-4">
         <h3 className="font-medium mb-1 truncate">{product.name}</h3>
@@ -170,13 +165,6 @@ export const VendorStorePage = () => {
                   currency: 'XAF',
                   minimumFractionDigits: 0
                 }).format(product.sale_price)}
-              </span>
-              <span className="text-gray-500 text-sm line-through ml-2">
-                {new Intl.NumberFormat('fr-CM', {
-                  style: 'currency',
-                  currency: 'XAF',
-                  minimumFractionDigits: 0
-                }).format(product.price)}
               </span>
             </>
           ) : (

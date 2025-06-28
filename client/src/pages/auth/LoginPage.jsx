@@ -135,7 +135,6 @@ const LoginPage = () => {
           }, 1000);
         }
       } catch (error) {
-        console.log("Login error:", error);
         
         // Provide very specific error messages
         if (error.message?.includes('Email not confirmed')) {
@@ -150,7 +149,6 @@ const LoginPage = () => {
         throw error;
       }
     } catch (error) {
-      console.log('Login error:', error);
       setLocalLoading(false);
     }
   };

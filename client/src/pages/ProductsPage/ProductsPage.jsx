@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { FilterIcon, SlidersHorizontal, X } from "lucide-react";
+import { FilterIcon, SlidersHorizontal, X, CheckCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useProducts } from "@/hooks/useProducts";
 import { useCategories } from "@/hooks/useCategories";
@@ -18,6 +18,12 @@ export const ProductsPage = () => {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [sortBy, setSortBy] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
+  // Add notification state
+  const [notification, setNotification] = useState({
+    show: false,
+    message: "",
+    type: "success" // success or error
+  });
   
   // Get filters from URL
   const category = searchParams.get("category") || "";
@@ -102,12 +108,31 @@ export const ProductsPage = () => {
   };
   
   const handleAddToCart = (productId) => {
-    console.log("Add to cart:", productId);
+    setNotification({
+      show: true,
+      message: t('product_added_to_cart', 'Produit ajouté au panier avec succès'),
+      type: "success"
+    });
+    
+    // Auto-hide notification after 3 seconds
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, show: false }));
+    }, 3000);
+    
     // This would use CartContext in a real implementation
   };
 
   const handleAddToWishlist = (productId) => {
-    console.log("Add to wishlist:", productId);
+    setNotification({
+      show: true,
+      message: t('product_added_to_wishlist', 'Produit ajouté à la liste de souhaits'),
+      type: "success"
+    });
+    
+    // Auto-hide notification after 3 seconds
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, show: false }));
+    }, 3000);
   };
 
   const clearAllFilters = () => {
@@ -120,6 +145,25 @@ export const ProductsPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Notification component */}
+      {notification.show && (
+        <div className={`fixed top-4 right-4 z-50 rounded-md shadow-lg p-4 transition-opacity duration-300
+          ${notification.type === "success" ? "bg-green-50 text-green-800 border border-green-200" : "bg-red-50 text-red-800 border border-red-200"}`}>
+          <div className="flex items-center">
+            {notification.type === "success" && (
+              <CheckCircle className="w-5 h-5 mr-2 text-green-500" />
+            )}
+            <p>{notification.message}</p>
+            <button 
+              className="ml-4 text-gray-500 hover:text-gray-700"
+              onClick={() => setNotification(prev => ({ ...prev, show: false }))}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+      
       <main className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl md:text-3xl font-bold">

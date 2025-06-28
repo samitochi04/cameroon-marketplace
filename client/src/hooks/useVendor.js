@@ -115,7 +115,6 @@ export const useVendor = () => {
     
     try {
       setCreateLoading(true);
-      console.log("Adding product with data:", productData);
       
       // Format data to match database schema
       const product = {
@@ -150,7 +149,6 @@ export const useVendor = () => {
         throw new Error('Product was not created properly');
       }
       
-      console.log("Product added successfully:", data[0]);
       return data[0];
     } catch (err) {
       console.error('Error creating product:', err);

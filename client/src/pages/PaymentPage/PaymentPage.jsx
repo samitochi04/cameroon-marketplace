@@ -34,7 +34,6 @@ export const PaymentPage = () => {
   }, [orderId, amount, navigate]);
 
   const handlePaymentSuccess = (paymentData) => {
-    console.log('Payment successful:', paymentData);
     setPaymentCompleted(true);
     // Redirect to order confirmation after a short delay
     setTimeout(() => {

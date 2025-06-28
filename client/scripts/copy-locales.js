@@ -27,8 +27,9 @@ const publicLocalesDir = path.join(__dirname, '../public/locales');  try {
       }
     }
 
-    console.log('✅ Locales copied successfully!');
   } catch (error) {
-    console.error('Error copying locales:', error);
+    if (import.meta.env.DEBUG_MODE === "true") {
+      console.error('Error copying locales:', error);
+    }
     process.exit(1);
   }

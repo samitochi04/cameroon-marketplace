@@ -217,7 +217,6 @@ export const VendorsPage = () => {
           setVendors(processedVendors);
           setFilteredVendors(processedVendors);
         } else {
-          console.log("No vendors found in database, using mock data");
           setVendors(MOCK_VENDORS);
           setFilteredVendors(MOCK_VENDORS);
         }

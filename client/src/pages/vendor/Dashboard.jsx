@@ -34,8 +34,6 @@ const VendorDashboard = () => {
       setLoading(true);
       setError(null);
       
-      console.log('Fetching vendor dashboard data...');
-      
       // Fetch vendor profile to check payment setup
       try {
         const { data: vendorData, error: vendorError } = await supabase

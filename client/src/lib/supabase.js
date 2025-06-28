@@ -48,12 +48,17 @@ supabase.auth.getSession()
     if (response.error) {
       console.warn('Supabase auth session check warning:', response.error);
     } else {
-      console.log('Supabase connection established successfully');
-      console.log('Session exists:', !!response.data.session);
+      if (import.meta.env.DEBUG_MODE === "true") {
+        console.log('Supabase connection established successfully');
+        console.log('Session exists:', !!response.data.session);
+      }
     }
   })
   .catch(err => {
-    console.error('Supabase connection test exception:', err);
+    if (import.meta.env.DEBUG_MODE === "true") {
+        console.error('Supabase connection test exception:', err);
+    }
+    
   });
 
 export { supabase };

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle, Loader, Clock, Package, ChevronRight, ShoppingBag } from 'lucide-react';
+import { CheckCircle, Loader, Clock, Package, ChevronRight, ShoppingBag, X } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -15,6 +15,7 @@ export const OrderConfirmationPage = () => {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showPaymentSuccess, setShowPaymentSuccess] = useState(true);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -129,6 +130,28 @@ export const OrderConfirmationPage = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
+      {/* Payment Success Notification */}
+      {showPaymentSuccess && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-8 flex items-center justify-between">
+          <div className="flex items-center">
+            <CheckCircle className="w-6 h-6 text-green-600 mr-3" />
+            <div>
+              <h3 className="font-medium text-green-800">{t('payment_successful', 'Paiement réussi!')}</h3>
+              <p className="text-green-700 text-sm">
+                {t('payment_success_message', 'Votre paiement a été traité avec succès et votre commande est confirmée.')}
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setShowPaymentSuccess(false)}
+            className="text-green-700 hover:bg-green-100 rounded-full p-1"
+            aria-label="Dismiss"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+      
       {/* Order confirmation header */}
       <div className="text-center mb-10">
         <div className="inline-flex items-center justify-center p-2 bg-green-100 rounded-full mb-4">

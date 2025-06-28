@@ -17,7 +17,6 @@ export const checkVendorStatus = async (userId) => {
     // If we can't even check tables or vendors table doesn't exist,
     // return a default approved status for vendors
     if (tableError || !tables || !tables.some(t => t.tablename === 'vendors')) {
-      console.log('Vendors table does not exist or cannot be accessed - allowing access');
       return {
         isApproved: true,
         isPending: false,
@@ -46,7 +45,6 @@ export const checkVendorStatus = async (userId) => {
       }
       
       if (!data) {
-        console.log('No vendor profile found for user:', userId);
         // Create vendor profile and return approved status
         await ensureVendorProfile(userId);
         
@@ -94,10 +92,8 @@ export const checkVendorStatus = async (userId) => {
  */
 export const ensureVendorProfile = async (userId, profileData = {}) => {
   try {
-    console.log('Creating vendor profile for user:', userId);
     return true; // Just return success for now
   } catch (error) {
-    console.error('Error in ensureVendorProfile:', error);
     return false;
   }
 };

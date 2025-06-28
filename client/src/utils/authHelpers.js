@@ -41,7 +41,6 @@ export const checkEmailConfirmation = async (email) => {
  */
 export const ensureUserProfile = async (userId, userData = {}) => {
   try {
-    console.log("Checking for profile:", userId);
     
     // Check if profile exists
     const { data: profile, error: profileError } = await supabase
@@ -57,12 +56,9 @@ export const ensureUserProfile = async (userId, userData = {}) => {
     
     // If profile exists, no need to create one
     if (profile) {
-      console.log("Profile exists:", profile);
       return { success: true, message: 'Profile already exists' };
     }
     
-    // If no profile, create a basic one
-    console.log("Profile doesn't exist, creating one now");
     const { error: insertError } = await supabase
       .from('profiles')
       .insert([{
@@ -77,7 +73,6 @@ export const ensureUserProfile = async (userId, userData = {}) => {
       return { success: false, message: `Failed to create profile: ${insertError.message}` };
     }
     
-    console.log("Profile created successfully");
     return { success: true, message: 'Profile created successfully' };
   } catch (error) {
     console.error('Error fixing user profile:', error);

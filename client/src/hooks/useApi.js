@@ -53,11 +53,8 @@ export function useApi() {
       setError(null);
       const tableName = getTableName(endpoint);
       
-      console.log(`API GET: accessing endpoint '${endpoint}'`);
-      
       // Special handling for analytics endpoints that might not exist
       if (endpoint.includes('/analytics/')) {
-        console.log('Handling analytics endpoint with mock data');
         
         if (endpoint.includes('/vendor/summary')) {
           return {

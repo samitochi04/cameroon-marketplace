@@ -324,8 +324,6 @@ export const OrderDetailModal = ({ isOpen, onClose, order }) => {
             <Button
               variant="primary"
               onClick={() => {
-                // Handle status update
-                console.log('Update order status');
               }}
             >
               {t('orders.update_status')}

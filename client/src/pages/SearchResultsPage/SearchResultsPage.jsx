@@ -121,13 +121,32 @@ export const SearchResultsPage = () => {
 
   // Handle add to cart
   const handleAddToCart = (productId) => {
-    console.log("Add to cart:", productId);
+    setNotification({
+      show: true,
+      message: t('product_added_to_cart', 'Produit ajouté au panier avec succès'),
+      type: "success"
+    });
+    
+    // Auto-hide notification after 3 seconds
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, show: false }));
+    }, 3000);
+    
     // This would use CartContext in a real implementation
   };
 
   // Handle add to wishlist
   const handleAddToWishlist = (productId) => {
-    console.log("Add to wishlist:", productId);
+    setNotification({
+      show: true,
+      message: t('product_added_to_wishlist', 'Produit ajouté à la liste de souhaits'),
+      type: "success"
+    });
+    
+    // Auto-hide notification after 3 seconds
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, show: false }));
+    }, 3000);
   };
 
   // Clear all filters

@@ -25,7 +25,6 @@ const MOCK_PRODUCTS = [
   {
     id: 1,
     name: "Mock Product 1",
-    price: 10000,
     sale_price: 8000,
     images: '["/mock-image-1.jpg"]',
     stock_quantity: 10,
@@ -36,7 +35,6 @@ const MOCK_PRODUCTS = [
   {
     id: 2,
     name: "Mock Product 2",
-    price: 15000,
     sale_price: null,
     images: '["/mock-image-2.jpg"]',
     stock_quantity: 5,
@@ -47,7 +45,6 @@ const MOCK_PRODUCTS = [
   {
     id: 3,
     name: "Mock Product 3",
-    price: 20000,
     sale_price: 18000,
     images: '["/mock-image-3.jpg"]',
     stock_quantity: 0,
@@ -58,7 +55,6 @@ const MOCK_PRODUCTS = [
   {
     id: 4,
     name: "Mock Product 4",
-    price: 25000,
     sale_price: null,
     images: '["/mock-image-4.jpg"]',
     stock_quantity: 8,
@@ -96,14 +92,11 @@ export const HomePage = () => {
       try {
         setLoading(true);
         
-        // Log page load/refresh for debugging
-        console.log(`Loading HomePage data, refreshCounter: ${refreshCounter}, path: ${pathname}`);
-        
         try {
           // Fetch featured products
           const { data: productsData, error: productsError } = await supabase
             .from('products')
-            .select('id, name, price, sale_price, images, stock_quantity, slug, vendor_id, status')
+            .select('id, name, sale_price, images, stock_quantity, slug, vendor_id, status')
             .eq('is_featured', true)
             .eq('status', 'published')
             .gt('stock_quantity', 0); // Only fetch in-stock products
@@ -230,13 +223,13 @@ export const HomePage = () => {
                     minimumFractionDigits: 0
                   }).format(product.sale_price)}
                 </span>
-                <span className="text-gray-500 text-sm line-through ml-2">
+                {/* <span className="text-gray-500 text-sm line-through ml-2">
                   {new Intl.NumberFormat('fr-CM', {
                     style: 'currency',
                     currency: 'XAF',
                     minimumFractionDigits: 0
                   }).format(product.price)}
-                </span>
+                </span> */}
               </>
             ) : (
               <span className="text-primary font-semibold">
@@ -249,7 +242,7 @@ export const HomePage = () => {
             )}
           </div>
           <div className="text-sm text-gray-500">
-            {product.stock_quantity > 0 ? `${product.stock_quantity} in stock` : 'Out of stock'}
+            {product.stock_quantity > 0 ? `En stock` : 'Rupture de stock'}
           </div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2">
@@ -420,7 +413,7 @@ export const HomePage = () => {
                   <Button
                     variant="primary"
                     as={Link}
-                    to="/products/special-offers"
+                    to="/products"
                   >
                     {t("home.shop_now")}
                   </Button>

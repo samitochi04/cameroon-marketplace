@@ -31,7 +31,6 @@ export const NavigationListener = ({ children }) => {
             refreshUser();
           }
           
-          console.log('Navigation refresh complete:', location.pathname);
         }
       } catch (error) {
         console.error('Error during navigation refresh:', error);
