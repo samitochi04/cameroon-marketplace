@@ -6,6 +6,8 @@ import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { supabase } from '@/lib/supabase';
+import { useSupabaseRefresh } from '@/lib/supabase';
+import { useRouteChange } from '@/hooks/useRouteChange';
 
 // Mock data as fallback
 const MOCK_PRODUCTS = [
@@ -72,11 +74,18 @@ export const HomePage = () => {
   
   // Get cart functions from context
   const { addToCart, cartItemsCount } = useCart();
+  
+  // Get refresh state
+  const { refreshCounter } = useSupabaseRefresh();
+  const { hasRouteChanged, pathname } = useRouteChange();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        
+        // Log page load/refresh for debugging
+        console.log(`Loading HomePage data, refreshCounter: ${refreshCounter}, path: ${pathname}`);
         
         try {
           // Fetch featured products
@@ -159,7 +168,7 @@ export const HomePage = () => {
     };
     
     fetchData();
-  }, []);
+  }, [refreshCounter, hasRouteChanged, pathname]);
 
   // Handle adding product to cart with feedback
   const handleAddToCart = (product) => {
@@ -432,7 +441,7 @@ export const HomePage = () => {
       </div>
 
       {/* Add a keyframe animation for the cart pulse effect */}
-      <style jsx global>{`
+      <style>{`
         @keyframes pulse {
           0% {
             box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb), 0.7);

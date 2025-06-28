@@ -1,11 +1,21 @@
-import { useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useState, useCallback, useEffect } from 'react';
+import { supabase, useSupabaseRefresh, refreshSupabaseSession } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
+import { useRouteChange } from '@/hooks/useRouteChange';
 
 export function useApi() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { user } = useAuth();
+  const { refreshCounter } = useSupabaseRefresh();
+  const { hasRouteChanged } = useRouteChange();
+
+  // Refresh session on route change
+  useEffect(() => {
+    if (hasRouteChanged) {
+      refreshSupabaseSession();
+    }
+  }, [hasRouteChanged]);
 
   // Create a mapping of API endpoints to Supabase tables
   // This helps prevent the "relation does not exist" errors
@@ -102,6 +112,11 @@ export function useApi() {
         // Try to query the table directly
         let query = supabase.from(tableName).select('*');
         
+        // Apply vendor filter for product endpoints when accessed by vendors
+        if (endpoint.includes('/products/vendor/products')) {
+          query = query.eq('vendor_id', user?.id);
+        }
+        
         // Apply filters if provided
         if (options.filters) {
           Object.entries(options.filters).forEach(([key, value]) => {
@@ -146,7 +161,20 @@ export function useApi() {
   }, [user]);
 
   // Rest of the hook methods (post, put, delete) would follow a similar pattern
-  // ...existing code...
+  // Generate cache key based on endpoint and options
+  const generateCacheKey = useCallback((endpoint, options) => {
+    return `${endpoint}_${JSON.stringify(options)}`;
+  }, []);
 
-  return { loading, error, get };
+  // Memo dependencies should include refreshCounter to trigger re-fetches
+  const memoizedGet = useCallback(async (endpoint, options = {}) => {
+    return await get(endpoint, options);
+  }, [get, refreshCounter]);
+
+  return { 
+    loading, 
+    error, 
+    get: memoizedGet,
+    refreshCounter
+  };
 }

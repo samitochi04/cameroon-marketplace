@@ -18,7 +18,7 @@ i18n
     
     ns: ['common'],
     defaultNS: 'common',
-      backend: {
+    backend: {
       loadPath: '/locales/{{lng}}/{{ns}}.json',
     },
     
@@ -26,6 +26,16 @@ i18n
       escapeValue: false, 
     },
     
+    returnObjects: true, // Enable returning objects in translations
+    returnEmptyString: false,
+    
+    compatibilityJSON: 'v3', // Suppress i18next JSON format warnings
+    
+    react: {
+      useSuspense: true,
+      transSupportBasicHtmlNodes: true,
+      transKeepBasicHtmlNodesFor: ['br', 'strong', 'i', 'p'],
+    }
   });
 
 export default i18n;

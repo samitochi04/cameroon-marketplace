@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { create } from 'zustand';
 
 // Get environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -15,10 +16,31 @@ const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    // Let Supabase handle storage keys automatically
-    debug: true
+    debug: false // Reduced debug output
   }
 });
+
+// Maintain a global refresh counter that components can subscribe to
+export const useSupabaseRefresh = create((set) => ({
+  refreshCounter: 0,
+  lastRefreshTime: new Date(),
+  refreshData: () => set((state) => ({ 
+    refreshCounter: state.refreshCounter + 1,
+    lastRefreshTime: new Date()
+  })),
+}));
+
+// Function to refresh session state
+export const refreshSupabaseSession = async () => {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    return { session: data.session, error: null };
+  } catch (error) {
+    console.error("Failed to refresh Supabase session:", error);
+    return { session: null, error };
+  }
+};
 
 // Test the connection with a safer method
 supabase.auth.getSession()

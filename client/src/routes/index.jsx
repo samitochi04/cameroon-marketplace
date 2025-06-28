@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
+import { NavigationListener } from './NavigationListener';
 
 // Layouts - Import as named exports
 import MainLayout from '../layouts/MainLayout';
@@ -142,7 +143,9 @@ const router = createBrowserRouter([
 export { router };
 
 export function AppRouter() {
-  return <RouterProvider router={router} />;
+  return (
+    <RouterProvider router={router} />
+  );
 }
 
 export default AppRouter;

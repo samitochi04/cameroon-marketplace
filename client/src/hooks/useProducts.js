@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useApi } from './useApi'; // Fix the import - useGet doesn't exist
+import { useApi } from './useApi';
+import { useRouteChange } from './useRouteChange';
+import { useSupabaseRefresh } from '@/lib/supabase';
 
 export function useProducts(options = {}) {
   const [products, setProducts] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { get } = useApi(); // Use useApi hook instead of useGet
+  const { get, refreshCounter } = useApi(); // Use useApi hook instead of useGet
+  const { hasRouteChanged } = useRouteChange();
+  const { refreshCounter: globalRefreshCounter } = useSupabaseRefresh();
 
   const {
     page = 1,
@@ -55,7 +59,7 @@ export function useProducts(options = {}) {
     };
 
     fetchProducts();
-  }, [page, pageSize, category, sort, search, featured, filters, get]);
+  }, [page, pageSize, category, sort, search, featured, filters, get, hasRouteChanged, refreshCounter, globalRefreshCounter]);
 
   return {
     products,

@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { FilterIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { supabase } from '@/lib/supabase';
+import { supabase, useSupabaseRefresh } from '@/lib/supabase';
 import { useCart } from "@/context/CartContext";
 import { Link, useLocation } from "react-router-dom";
 import { Input } from "@/components/ui/Input";
+import { useRouteChange } from "@/hooks/useRouteChange";
 
 // Mock data as fallback
 const MOCK_PRODUCTS = [
@@ -30,6 +31,8 @@ export const ProductListPage = () => {
   const [priceRange, setPriceRange] = useState({ min: 0, max: 1000000 });
   const [sortBy, setSortBy] = useState("newest");
   const { addToCart } = useCart();
+  const { refreshCounter } = useSupabaseRefresh();
+  const { hasRouteChanged, pathname } = useRouteChange();
 
   // Add search query state from URL
   const searchParams = new URLSearchParams(location.search);
@@ -89,7 +92,7 @@ export const ProductListPage = () => {
     };
 
     fetchProductsAndCategories();
-  }, []);
+  }, [refreshCounter, hasRouteChanged]);
 
   // Filtering and sorting logic (now includes search)
   useEffect(() => {

@@ -291,6 +291,93 @@ class EmailService {
     }
   }
   
+  // Send notification when payout fails
+  async sendPayoutFailureNotification(vendorId, orderId, payoutData) {
+    try {
+      // Get vendor details
+      const { data: vendor, error: vendorError } = await supabase
+        .from('vendors')
+        .select('store_name')
+        .eq('id', vendorId)
+        .single();
+      
+      if (vendorError || !vendor) {
+        console.error('Vendor not found for payout failure notification:', vendorError);
+        return false;
+      }
+      
+      // Get vendor email from profiles
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email, name')
+        .eq('id', vendorId)
+        .single();
+      
+      if (profileError || !profile) {
+        console.error('Vendor profile not found:', profileError);
+        return false;
+      }
+      
+      // Get email template (fallback to generic if specific template doesn't exist)
+      let template = await this.getEmailTemplate('vendor_payout_failure_notification');
+      if (!template) {
+        template = await this.getEmailTemplate('vendor_payout_notification');
+        if (!template) {
+          console.error('No suitable email template found for payout failure notification');
+          
+          // Send a basic notification even without template
+          const info = await this.transporter.sendMail({
+            from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM_ADDRESS}>`,
+            to: profile.email,
+            subject: `Payment Processing Failed - Order #${orderId.slice(0, 8)}`,
+            html: `<div>
+              <h1>Payment Processing Failed</h1>
+              <p>Dear ${profile.name || 'Vendor'},</p>
+              <p>We encountered an issue while processing your payment of ${payoutData.amount} XAF for order #${orderId.slice(0, 8)}.</p>
+              <p>Our team has been notified and is working to resolve this issue. The order status has been updated, but the payment will need to be reprocessed.</p>
+              <p>Error details: ${payoutData.error || 'Unknown error'}</p>
+              <p>Order Item ID: ${payoutData.orderItemId || 'Not available'}</p>
+              <p>Thank you for your patience.</p>
+            </div>`
+          });
+          
+          console.log(`Payout failure notification sent without template: ${info.messageId}`);
+          return true;
+        }
+      }
+      
+      // Prepare template data
+      const templateData = {
+        VENDOR_NAME: profile.name || 'Valued Vendor',
+        STORE_NAME: vendor.store_name || 'Your Store',
+        ORDER_ID: orderId.slice(0, 8),
+        AMOUNT: payoutData.amount,
+        ERROR_MESSAGE: payoutData.error || 'Unknown payment processing error',
+        ORDER_ITEM_ID: payoutData.orderItemId || 'Not available',
+        DATE: new Date().toLocaleDateString('fr-CM')
+      };
+      
+      // Replace placeholders
+      const htmlContent = this.replacePlaceholders(template.html_content, templateData);
+      const subject = this.replacePlaceholders(template.subject, templateData);
+      
+      // Send email
+      const info = await this.transporter.sendMail({
+        from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM_ADDRESS}>`,
+        to: profile.email,
+        subject: subject,
+        html: htmlContent
+      });
+      
+      console.log(`Payout failure notification sent: ${info.messageId}`);
+      return true;
+      
+    } catch (error) {
+      console.error('Failed to send payout failure notification:', error);
+      return false;
+    }
+  }
+  
   // Send email to customer when order status changes
   async sendCustomerOrderStatusNotification(customerId, orderId, newStatus, orderData = {}) {
     try {

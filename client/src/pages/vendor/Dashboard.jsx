@@ -19,6 +19,7 @@ const VendorDashboard = () => {
   });
   const [recentOrders, setRecentOrders] = useState([]);
   const [topProducts, setTopProducts] = useState([]);
+  const [salesChartData, setSalesChartData] = useState([]);
   const [vendorProfile, setVendorProfile] = useState(null);
   const [timeRange, setTimeRange] = useState('7d');
 
@@ -39,7 +40,7 @@ const VendorDashboard = () => {
       try {
         const { data: vendorData, error: vendorError } = await supabase
           .from('vendors')
-          .select('has_payment_setup, mobile_money_accounts')
+          .select('has_payment_setup, mobile_money_accounts, balance, total_earnings')
           .eq('id', user.id)
           .single();
         
@@ -51,6 +52,20 @@ const VendorDashboard = () => {
       } catch (vendorErr) {
         console.error('Error fetching vendor profile:', vendorErr);
       }
+      
+      // Initialize chart data with monthly labels
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const initialChartData = months.map(month => ({
+        label: month,
+        sales: 0,
+        orders: 0
+      }));
+      
+      // Set the initial chart data
+      setSalesChartData(initialChartData);
+      
+      // Create a simple chart visualization with random data
+      // We'll replace this with actual data below when processing orders
 
       // Calculate date range
       const now = new Date();
@@ -67,97 +82,165 @@ const VendorDashboard = () => {
           startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       }
 
-      // Fetch orders data
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
+      // Fetch order items for the vendor with products
+      const { data: orderItemsData, error: orderItemsError } = await supabase
+        .from('order_items')
         .select(`
           id,
+          order_id,
+          product_id,
+          quantity,
+          price,
+          total,
           status,
-          total_amount,
           created_at,
-          updated_at,
-          order_items!inner (
-            vendor_id,
-            quantity
+          orders:order_items_order_id_fkey (
+            id,
+            user_id,
+            status,
+            total_amount,
+            payment_status,
+            created_at
+          ),
+          products:order_items_product_id_fkey (
+            id,
+            name,
+            price,
+            sale_price,
+            images
           )
         `)
-        .eq('order_items.vendor_id', user.id)
+        .eq('vendor_id', user.id)
         .gte('created_at', startDate.toISOString())
         .order('created_at', { ascending: false });
 
-      if (ordersError) {
-        console.error('Error fetching orders:', ordersError);
+      if (orderItemsError) {
+        console.error('Error fetching order items:', orderItemsError);
+        throw orderItemsError;
       }
 
-      // Fetch all-time orders for total counts
-      const { data: allOrdersData, error: allOrdersError } = await supabase
-        .from('orders')
+      // Fetch all-time order items for total counts
+      const { data: allOrderItemsData, error: allOrderItemsError } = await supabase
+        .from('order_items')
         .select(`
           id,
           status,
-          total_amount,
+          total,
           created_at,
-          order_items!inner (
-            vendor_id,
-            quantity
-          )
-        `)
-        .eq('order_items.vendor_id', user.id);
-
-      if (allOrdersError) {
-        console.error('Error fetching all orders:', allOrdersError);
-      }
-
-      // Fetch products data
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select(`
-          id,
-          name,
+          order_id,
           price,
-          order_items (
-            quantity,
-            created_at
-          )
+          quantity
         `)
         .eq('vendor_id', user.id);
 
-      if (productsError) {
-        console.error('Error fetching products:', productsError);
+      if (allOrderItemsError) {
+        console.error('Error fetching all order items:', allOrderItemsError);
+        throw allOrderItemsError;
       }
 
-      // Calculate dashboard metrics
-      const totalOrders = allOrdersData?.length || 0;
-      const pendingOrders = allOrdersData?.filter(order => order.status === 'pending').length || 0;
-      const revenue = ordersData?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+      // Fetch payouts data for revenue calculation
+      const { data: payoutData, error: payoutError } = await supabase
+        .from('vendor_payouts')
+        .select(`
+          id,
+          amount,
+          status,
+          created_at
+        `)
+        .eq('vendor_id', user.id)
+        .gte('created_at', startDate.toISOString());
+
+      if (payoutError) {
+        console.error('Error fetching payout data:', payoutError);
+      }
+
+      // Calculate order metrics from order items
+      // Group order items by order ID to get unique orders
+      const uniqueOrdersMap = new Map();
       
-      // Calculate items sold in the time range
-      const itemsSold = ordersData?.reduce((sum, order) => {
-        return sum + (order.order_items?.reduce((itemSum, item) => itemSum + (item.quantity || 0), 0) || 0);
-      }, 0) || 0;
+      orderItemsData.forEach(item => {
+        if (item.orders) {
+          uniqueOrdersMap.set(item.orders.id, item.orders);
+        }
+      });
+      
+      // Count items with non-pending status as "sold"
+      const itemsSold = orderItemsData
+        .filter(item => item.status !== 'pending')
+        .reduce((sum, item) => sum + item.quantity, 0);
+      
+      // Calculate revenue based on completed payouts
+      const revenue = payoutData
+        ?.filter(payout => payout.status === 'completed')
+        .reduce((sum, payout) => sum + (payout.amount || 0), 0) || 0;
+      
+      // Count pending orders from unique orders where status is pending
+      const pendingOrders = Array.from(uniqueOrdersMap.values())
+        .filter(order => order.status === 'pending')
+        .length;
 
-      // Get recent orders (last 5)
-      const recentOrdersList = ordersData?.slice(0, 5).map(order => ({
-        id: order.id,
-        date: order.created_at,
-        status: order.status,
-        total: order.total_amount
-      })) || [];
+      const totalOrders = uniqueOrdersMap.size;
+      
+      // Update chart data with actual monthly sales data
+      const monthlyData = initialChartData.slice(); // Clone the initial data
+      
+      // Group sales data by month
+      orderItemsData.forEach(item => {
+        if (item.total && item.created_at) {
+          const date = new Date(item.created_at);
+          const monthIndex = date.getMonth();
+          
+          // Update monthly sales and order count
+          monthlyData[monthIndex].sales += (item.total || 0);
+          monthlyData[monthIndex].orders += 1;
+        }
+      });
+      
+      setSalesChartData(monthlyData);
 
-      // Calculate top products
-      const productStats = productsData?.map(product => {
-        const totalSold = product.order_items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
-        const totalRevenue = totalSold * (product.price || 0);
+      // Get recent orders with more details (last 5)
+      const uniqueOrders = Array.from(uniqueOrdersMap.values());
+      const recentOrdersList = uniqueOrders
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 5)
+        .map(order => {
+          // Find all order items for this order
+          const orderItems = orderItemsData.filter(item => item.order_id === order.id);
+          
+          return {
+            id: order.id,
+            date: order.created_at,
+            status: order.status,
+            total: order.total_amount,
+            payment_status: order.payment_status,
+            items: orderItems.length,
+            customer_id: order.user_id
+          };
+        });
+
+      // Calculate top products by calculating total sold quantity per product
+      const productSales = {};
+      orderItemsData.forEach(item => {
+        if (!item.product_id) return;
         
-        return {
-          id: product.id,
-          name: product.name,
-          sold: totalSold,
-          revenue: totalRevenue
-        };
-      }).filter(product => product.sold > 0)
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 5) || [];
+        if (!productSales[item.product_id]) {
+          productSales[item.product_id] = {
+            id: item.product_id,
+            name: item.products?.name || 'Unknown Product',
+            image: item.products?.images?.[0] || null,
+            sold: 0,
+            revenue: 0
+          };
+        }
+        
+        productSales[item.product_id].sold += item.quantity || 0;
+        productSales[item.product_id].revenue += item.total || 0;
+      });
+      
+      const topProductsList = Object.values(productSales)
+        .filter(product => product.sold > 0)
+        .sort((a, b) => b.sold - a.sold)
+        .slice(0, 5);
 
       setDashboardData({
         totalOrders,
@@ -167,7 +250,7 @@ const VendorDashboard = () => {
       });
 
       setRecentOrders(recentOrdersList);
-      setTopProducts(productStats);
+      setTopProducts(topProductsList);
 
     } catch (err) {
       console.error('Dashboard error:', err);
@@ -341,13 +424,35 @@ const VendorDashboard = () => {
               </div>
             </div>
 
-            {/* Placeholder for chart */}
-            <div className="aspect-w-16 aspect-h-9 bg-gray-50 flex items-center justify-center rounded-md">
-              <div className="text-center p-4">
-                <BarChart size={48} className="mx-auto text-gray-400 mb-2" />
-                <p className="text-gray-500">{t('vendor.dashboard.sales_chart')}</p>
-              </div>
+            {/* Sales Chart */}
+            <div className="h-64 w-full">
+              {recentOrders.length > 0 ? (
+                <div className="grid grid-cols-12 h-full gap-1">
+                  {salesChartData.map((month, index) => {
+                    const height = month.sales > 0 ? `${(month.sales / Math.max(...salesChartData.map(m => m.sales))) * 100}%` : '4%';
+                    const currentMonth = new Date().getMonth();
+                    const isCurrentMonth = index === currentMonth;
+                    
+                    return (
+                      <div key={month.label} className="flex flex-col items-center justify-end">
+                        <div 
+                          className={`w-full ${isCurrentMonth ? 'bg-primary' : 'bg-primary/60'} rounded-t`} 
+                          style={{ height }}
+                          title={`${month.label}: ${month.sales.toLocaleString()} XAF (${month.orders} orders)`}
+                        ></div>
+                        <span className="text-xs mt-1 text-gray-500">{month.label.substring(0, 1)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center p-4 h-full flex flex-col items-center justify-center">
+                  <BarChart size={48} className="mx-auto text-gray-400 mb-2" />
+                  <p className="text-gray-500">{t('vendor.dashboard.no_sales_data')}</p>
+                </div>
+              )}
             </div>
+          </div>
           </div>
 
           {/* Recent Orders */}
@@ -463,7 +568,6 @@ const VendorDashboard = () => {
           </div>
         </div>
       </div>
-    </div>
   );
 };
 

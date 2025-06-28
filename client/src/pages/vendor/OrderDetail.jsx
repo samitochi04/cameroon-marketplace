@@ -164,9 +164,11 @@ const VendorOrderDetail = () => {
       [itemId]: !prev[itemId]
     }));
   };  // Update item status
-  const updateItemStatus = async (itemId, newStatus) => {
+  const updateItemStatus = async (itemId, newStatus, retryCount = 0) => {
     try {
       setItemStatusUpdating(prev => ({ ...prev, [itemId]: true }));
+      
+      console.log(`Updating item status for item ID: ${itemId} to ${newStatus}${retryCount > 0 ? ` (retry attempt ${retryCount})` : ''}`);
       
       // Get the auth token for API calls
       const { data: { session } } = await supabase.auth.getSession();
@@ -174,8 +176,11 @@ const VendorOrderDetail = () => {
         throw new Error('Authentication required');
       }
       
+      const apiUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/vendor/order-items/${itemId}/status`;
+      console.log(`API URL: ${apiUrl}`);
+      
       // Call our authenticated backend API instead of direct Supabase
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/vendor/order-items/${itemId}/status`, {
+      const response = await fetch(apiUrl, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -184,9 +189,22 @@ const VendorOrderDetail = () => {
         body: JSON.stringify({ status: newStatus })
       });
       
+      console.log(`API response status: ${response.status}`);
       const result = await response.json();
+      console.log('API response body:', result);
       
       if (!result.success) {
+        // If this is a server error (500), retry up to 2 times
+        if (response.status >= 500 && retryCount < 2) {
+          console.log(`Server error, retrying (${retryCount + 1}/2)...`);
+          // Briefly release the updating state to show it's retrying
+          setItemStatusUpdating(prev => ({ ...prev, [itemId]: false }));
+          
+          // Wait 1 second before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return updateItemStatus(itemId, newStatus, retryCount + 1);
+        }
+        
         throw new Error(result.message || 'Failed to update item status');
       }
       
@@ -198,16 +216,30 @@ const VendorOrderDetail = () => {
       );
         // Show success message if status changed to processing (payout triggered)
       if (newStatus === 'processing') {
-        setPayoutNotification({
-          type: 'success',
-          message: 'Order updated to processing! Payout has been initiated and email notification sent.',
-          timestamp: Date.now()
-        });
+        // Check if the API response included payout information
+        const payoutInfo = result.data?.payout;
         
-        // Auto-hide notification after 10 seconds
+        if (payoutInfo && payoutInfo.status === 'failed') {
+          // Show a warning notification if payout failed but order update succeeded
+          setPayoutNotification({
+            type: 'warning',
+            message: 'Order updated to processing! However, there was an issue processing your payout. Our team has been notified and will resolve this soon. You will receive an email notification with details.',
+            timestamp: Date.now(),
+            details: payoutInfo.error || 'Payment gateway error'
+          });
+        } else {
+          // Show success notification for normal case
+          setPayoutNotification({
+            type: 'success',
+            message: 'Order updated to processing! Payout has been initiated and email notification sent.',
+            timestamp: Date.now()
+          });
+        }
+        
+        // Auto-hide notification after 15 seconds
         setTimeout(() => {
           setPayoutNotification(null);
-        }, 10000);
+        }, 15000);
       }
         // Check if we need to update the overall order status
       // Get all order items for this order to check their statuses
@@ -255,7 +287,47 @@ const VendorOrderDetail = () => {
       setShowStatusDropdown(prev => ({ ...prev, [itemId]: false }));
     } catch (error) {
       console.error('Failed to update item status:', error);
-      // Show error toast or message
+      // Log detailed debugging information
+      console.error({
+        errorMessage: error.message,
+        itemId,
+        newStatus,
+        vendorItemsCount: vendorItems?.length || 0,
+        itemDetails: vendorItems?.find(item => item.id === itemId) || 'Item not found in local state'
+      });
+      
+      // Show error notification
+      let errorMessage = error.message;
+      
+      // More user-friendly error messages
+      if (errorMessage.includes("Could not embed")) {
+        errorMessage = "Database configuration issue. Please contact support.";
+      } else if (errorMessage.includes("not found")) {
+        errorMessage = "Order item not found. It may have been removed or modified.";
+      } else if (errorMessage.includes("Access denied")) {
+        errorMessage = "You don't have permission to update this item.";
+      } else if (errorMessage.includes("Missing vendor price data")) {
+        errorMessage = "Product price information is missing. Please contact support.";
+      } else if (errorMessage.includes("invalid price")) {
+        errorMessage = "Product price is invalid. Please update the product price.";
+      } else if (errorMessage.includes("Error fetching order item")) {
+        errorMessage = "Unable to find order information. Please refresh and try again.";
+      } else if (errorMessage.includes("payment gateway") || errorMessage.includes("payout failed")) {
+        errorMessage = "Payment gateway error. Your order status was updated, but there was an issue with the payout. Our team has been notified.";
+      } else if (errorMessage.includes("Internal server error")) {
+        errorMessage = "Server error. Please try again later. Your request may have been processed despite the error.";
+      }
+      
+      setPayoutNotification({
+        type: 'error',
+        message: `Error: ${errorMessage}. Please try again or contact support.`,
+        timestamp: Date.now()
+      });
+      
+      // Auto-hide notification after 10 seconds
+      setTimeout(() => {
+        setPayoutNotification(null);
+      }, 10000);
     } finally {
       setItemStatusUpdating(prev => ({ ...prev, [itemId]: false }));
     }
@@ -330,18 +402,43 @@ const VendorOrderDetail = () => {
           </span>        </div>
       </div>
       
-      {/* Payout Success Notification */}
+      {/* Notification (Success, Warning, or Error) */}
       {payoutNotification && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md mb-6 flex items-start">
+        <div className={`${
+          payoutNotification.type === 'error' 
+            ? "bg-red-50 border border-red-200 text-red-700" 
+            : payoutNotification.type === 'warning'
+              ? "bg-yellow-50 border border-yellow-200 text-yellow-700"
+              : "bg-green-50 border border-green-200 text-green-700"
+        } px-4 py-3 rounded-md mb-6 flex items-start`}>
           <div className="flex">
-            <DollarSign className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+            {payoutNotification.type === 'error' ? (
+              <AlertTriangle className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+            ) : payoutNotification.type === 'warning' ? (
+              <AlertTriangle className="h-5 w-5 text-yellow-500 mr-2 flex-shrink-0 mt-0.5" />
+            ) : (
+              <DollarSign className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+            )}
             <div>
-              <p className="font-medium">Payout Processed!</p>
+              <p className="font-medium">
+                {payoutNotification.type === 'error' 
+                  ? 'Error' 
+                  : payoutNotification.type === 'warning'
+                    ? 'Order Updated - Payout Pending'
+                    : 'Payout Processed!'}
+              </p>
               <p className="text-sm mt-1">{payoutNotification.message}</p>
-              <div className="flex items-center mt-2 text-sm">
-                <Mail className="h-4 w-4 mr-1" />
-                <span>Email notification sent to your registered email</span>
-              </div>
+              {payoutNotification.details && (
+                <p className="text-sm mt-1 font-mono bg-gray-100 px-2 py-1 rounded">
+                  Details: {payoutNotification.details}
+                </p>
+              )}
+              {(payoutNotification.type === 'success' || payoutNotification.type === 'warning') && (
+                <div className="flex items-center mt-2 text-sm">
+                  <Mail className="h-4 w-4 mr-1" />
+                  <span>Email notification sent to your registered email</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -44,20 +44,21 @@ const EarningsPage = () => {
           throw new Error('Failed to fetch vendor data');
         }
         
-        // Build query for vendor_earnings based on date range
-        let query = supabase
-          .from('vendor_earnings')
+        // First get vendor payouts data (this is what actually tracks earnings)
+        // for more accurate earnings information
+        let payoutQuery = supabase
+          .from('vendor_payouts')
           .select(`
             id,
             vendor_id,
-            order_item_id,
             amount,
-            fee,
-            net_amount,
             status,
-            description,
             created_at,
-            transaction_id
+            transaction_id,
+            operator,
+            order_reference,
+            payout_method,
+            notes
           `, { count: 'exact' })
           .eq('vendor_id', user.id)
           .order('created_at', { ascending: false });
@@ -68,19 +69,19 @@ const EarningsPage = () => {
           switch (dateRange) {
           case 'last_7_days':
             startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            query = query.gte('created_at', startDate.toISOString());
+            payoutQuery = payoutQuery.gte('created_at', startDate.toISOString());
             break;
           case 'last_30_days':
             startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-            query = query.gte('created_at', startDate.toISOString());
+            payoutQuery = payoutQuery.gte('created_at', startDate.toISOString());
             break;
           case 'last_90_days':
             startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-            query = query.gte('created_at', startDate.toISOString());
+            payoutQuery = payoutQuery.gte('created_at', startDate.toISOString());
             break;
           case 'this_year': {
             const firstDayOfYear = new Date(now.getFullYear(), 0, 1);
-            query = query.gte('created_at', firstDayOfYear.toISOString());
+            payoutQuery = payoutQuery.gte('created_at', firstDayOfYear.toISOString());
             break;
           }
           case 'all_time':
@@ -93,42 +94,95 @@ const EarningsPage = () => {
         const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
         const endIndex = startIndex + ITEMS_PER_PAGE - 1;
         
-        const { data: earnings, error: earningsError, count: totalCount } = await query
+        const { data: payouts, error: payoutsError, count: totalCount } = await payoutQuery
           .range(startIndex, endIndex);
 
-        if (earningsError) {
-          console.error('Error fetching earnings:', earningsError);
+        if (payoutsError) {
+          console.error('Error fetching payouts:', payoutsError);
           throw new Error('Failed to fetch earnings data');
         }
 
-        // Calculate totals for all earnings (not date filtered)
-        const { data: allEarnings, error: totalsError } = await supabase
-          .from('vendor_earnings')
-          .select('amount, fee, net_amount, status')
+        // For each payout, get related order data to display
+        // We'll enrich the payouts with order information
+        const enrichedPayouts = await Promise.all(payouts.map(async (payout) => {
+          if (payout.order_reference) {
+            try {
+              // Using order_reference to find order items
+              const { data: orderItems } = await supabase
+                .from('order_items')
+                .select(`
+                  product_id,
+                  order_id,
+                  products:product_id (name, images),
+                  orders:order_id (created_at)
+                `)
+                .eq('order_id', payout.order_reference)
+                .limit(1);
+                
+              const orderItem = orderItems && orderItems.length > 0 ? orderItems[0] : null;
+              return {
+                ...payout,
+                product_name: orderItem?.products?.name || 'Unknown Product',
+                product_image: orderItem?.products?.images?.[0] || null,
+                order_date: orderItem?.orders?.created_at || payout.created_at
+              };
+            } catch (err) {
+              console.error('Error fetching order item details:', err);
+              return payout;
+            }
+          }
+          return payout;
+        }));
+
+        // Calculate totals for all payouts (not date filtered)
+        const { data: allPayouts, error: totalsError } = await supabase
+          .from('vendor_payouts')
+          .select('amount, status')
           .eq('vendor_id', user.id);
 
         if (totalsError) {
           console.error('Error fetching totals:', totalsError);
         }
 
+        // Get fee information if available (platform commission)
+        // This would require a separate query or calculation
+        
         // Calculate summary data
-        const totalEarnings = allEarnings?.reduce((sum, earning) => sum + (earning.amount || 0), 0) || 0;
-        const totalFees = allEarnings?.reduce((sum, earning) => sum + (earning.fee || 0), 0) || 0;
-        const netEarnings = allEarnings?.reduce((sum, earning) => sum + (earning.net_amount || 0), 0) || 0;
-        const pendingEarnings = allEarnings?.filter(e => e.status === 'pending')
-          .reduce((sum, earning) => sum + (earning.net_amount || 0), 0) || 0;
+        const totalEarnings = allPayouts?.reduce((sum, payout) => sum + (payout.amount || 0), 0) || 0;
+        const completedEarnings = allPayouts
+          ?.filter(p => p.status === 'completed')
+          .reduce((sum, payout) => sum + (payout.amount || 0), 0) || 0;
+        const pendingEarnings = allPayouts
+          ?.filter(p => p.status === 'pending')
+          .reduce((sum, payout) => sum + (payout.amount || 0), 0) || 0;
+        const failedEarnings = allPayouts
+          ?.filter(p => p.status === 'failed')
+          .reduce((sum, payout) => sum + (payout.amount || 0), 0) || 0;
 
         setEarningsData({
           balance: vendorData?.balance || 0,
-          totalEarnings: vendorData?.total_earnings || totalEarnings,
-          totalFees,
-          netEarnings,
+          totalEarnings: vendorData?.total_earnings || completedEarnings,
+          completedEarnings,
           pendingEarnings,
+          failedEarnings,
           lastPayoutDate: vendorData?.last_payout_date,
           lastPayoutAmount: vendorData?.last_payout_amount || 0
         });
 
-        setTransactions(earnings || []);
+        // Format the transactions for display
+        const formattedTransactions = enrichedPayouts.map(payout => ({
+          id: payout.id,
+          date: payout.created_at,
+          description: `Payout for ${payout.product_name || 'order'} #${payout.order_reference?.slice(0, 8) || 'N/A'}`,
+          amount: payout.amount,
+          status: payout.status,
+          reference: payout.transaction_id,
+          error: payout.notes, // Using notes field for error messages
+          productImage: payout.product_image,
+          operator: payout.operator
+        }));
+        
+        setTransactions(formattedTransactions);
         setTotalPages(Math.ceil((totalCount || 0) / ITEMS_PER_PAGE));
 
       } catch (err) {
@@ -141,6 +195,22 @@ const EarningsPage = () => {
     
     fetchEarningsData();
   }, [user, t, dateRange, currentPage]);
+  
+  // Update the VendorEarnings component with more accurate data
+  useEffect(() => {
+    if (earningsData) {
+      const vendorEarningsData = {
+        balance: earningsData.balance || 0,
+        totalEarnings: earningsData.totalEarnings || 0,
+        pendingEarnings: earningsData.pendingEarnings || 0,
+        lastPayout: earningsData.lastPayoutAmount || 0
+      };
+      
+      // You could emit an event or use a context if needed
+      // This is just here for reference
+      console.log('Updated vendor earnings data:', vendorEarningsData);
+    }
+  }, [earningsData]);
   
   // Format currency
   const formatCurrency = (amount) => {
@@ -299,16 +369,16 @@ const EarningsPage = () => {
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {transaction.description || t('vendor.order_earnings')}
                     </td>                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {transaction.order_items?.orders?.id ? `#${transaction.order_items.orders.id.slice(-8)}` : '-'}
+                      {transaction.reference ? `#${transaction.reference.slice(-8)}` : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatCurrency(transaction.amount)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatCurrency(transaction.fee)}
+                      {formatCurrency(transaction.amount * 0.05)} {/* Assuming 5% platform fee */}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {formatCurrency(transaction.net_amount)}
+                      {formatCurrency(transaction.amount * 0.95)} {/* Net amount after platform fee */}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
