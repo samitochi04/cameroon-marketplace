@@ -152,23 +152,65 @@ export const VendorsPage = () => {
           .order('total_earnings', { ascending: false });
 
         if (vendorsError) throw vendorsError;
-
-        // Process vendors data exactly like HomePage.jsx
-        const processedVendors = (vendorsData || []).map(vendor => ({
-          id: vendor.id,
-          name: vendor.store_name,
-          slug: vendor.id, // Use ID as slug since we don't have a slug field
-          description: vendor.description || 'Quality products from a trusted vendor', // Use default description
-          logoUrl: vendor.logo_url || "/vendor-placeholder.jpg",
-          bannerUrl: vendor.banner_url || "/vendor-banner-placeholder.jpg",
-          rating: 4.5, // Default rating since we don't have this data yet
-          reviewCount: 0, // Default review count
-          productCount: 0, // Will be populated separately if needed
-          location: vendor.store_city ? `${vendor.store_city}, ${vendor.store_country || 'Cameroon'}` : 'Cameroon',
-          joinDate: vendor.created_at,
-          featured: vendor.total_earnings > 100000, // Consider high-earning vendors as featured
-          categories: [] // Will be populated if needed
-        }));
+        
+        // Fetch all categories
+        const { data: categoriesData } = await supabase
+          .from('categories')
+          .select('id, name, slug');
+        
+        // Map of category IDs to names
+        const categoryMap = {};
+        if (categoriesData) {
+          categoriesData.forEach(cat => {
+            categoryMap[cat.id] = cat.name;
+          });
+        }
+        
+        // Create an array of processed vendors
+        const processedVendors = [];
+        
+        // Process each vendor and fetch their product counts and categories
+        for (const vendor of vendorsData || []) {
+          // Get product count for this vendor
+          const { count: productCount, error: countError } = await supabase
+            .from('products')
+            .select('id', { count: 'exact', head: true })
+            .eq('vendor_id', vendor.id)
+            .eq('status', 'published');
+            
+          if (countError) {
+            console.error(`Error fetching product count for vendor ${vendor.id}:`, countError);
+          }
+          
+          // Get category IDs for this vendor's products
+          const { data: vendorProducts } = await supabase
+            .from('products')
+            .select('category_id')
+            .eq('vendor_id', vendor.id)
+            .eq('status', 'published');
+            
+          // Extract unique category IDs and convert to category names
+          const categoryIds = [...new Set(vendorProducts?.map(p => p.category_id) || [])];
+          const categories = categoryIds
+            .map(id => categoryMap[id])
+            .filter(Boolean); // Remove any undefined values
+          
+          processedVendors.push({
+            id: vendor.id,
+            name: vendor.store_name,
+            slug: vendor.id, // Use ID as slug since we don't have a slug field
+            description: vendor.description || 'Quality products from a trusted vendor',
+            logoUrl: vendor.logo_url || "/vendor-placeholder.jpg",
+            bannerUrl: vendor.banner_url || "/vendor-banner-placeholder.jpg",
+            rating: 4.5, // Default rating since we don't have this data yet
+            reviewCount: 0, // Default review count
+            productCount: productCount || 0,
+            location: vendor.store_city ? `${vendor.store_city}, ${vendor.store_country || 'Cameroon'}` : 'Cameroon',
+            joinDate: vendor.created_at,
+            featured: vendor.total_earnings > 100000, // Consider high-earning vendors as featured
+            categories: categories
+          });
+        }
 
         // Use real data if available, otherwise fallback to mock data
         if (processedVendors.length > 0) {

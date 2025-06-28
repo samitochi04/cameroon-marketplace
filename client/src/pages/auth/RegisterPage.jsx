@@ -55,16 +55,14 @@ const RegisterPage = () => {
       // For debugging - log the entire result
       console.log("Full registration response:", JSON.stringify(result));
       
-      // Always show success page and instruct to check email
-      setSuccessMessage(
-        "Registration successful! Please check your email to verify your account. " +
-        "If you don't see it in your inbox, please check your spam folder."
-      );
+      // Show success message in French as requested
+      setSuccessMessage("Votre compte à été créer avec succes");
       
       // Wait a bit longer before redirect so user can read message
       setTimeout(() => {
-        navigate('/login?verification=required');
-      }, 5000);
+        // Redirect with a custom parameter to show the "Maintenant connecter vous" message
+        navigate('/login?registered=true');
+      }, 3000);
     } catch (error) {
       console.error('Registration error in component:', error);
       

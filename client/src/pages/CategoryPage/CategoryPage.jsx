@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronRight, FilterIcon, X } from "lucide-react";
+import { ChevronRight, FilterIcon, X, ShoppingCart } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { supabase } from "@/lib/supabase";
+import { useCart } from "@/context/CartContext";
 
 export const CategoryPage = () => {
   const { t } = useTranslation();
   const { slug } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { addToCart } = useCart();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [priceRange, setPriceRange] = useState({ 
     min: parseInt(searchParams.get('minPrice') || '0', 10), 
@@ -226,12 +228,19 @@ export const CategoryPage = () => {
     navigate(`/category/${subcategorySlug}`);
   };
 
-  // Handle add to cart
-  const handleAddToCart = (productId) => {
-    console.log("Add to cart:", productId);
-    // This would use CartContext in a real implementation
+  // Handle adding product to cart
+  const handleAddToCart = (product) => {
+    addToCart({
+      id: product.id,
+      vendor_id: product.vendor_id,
+      name: product.name,
+      price: product.sale_price || product.price,
+      image: product.imageUrl,
+      quantity: 1,
+      stock_quantity: product.stock_quantity
+    });
   };
-
+  
   // Clear all filters
   const clearAllFilters = () => {
     setPriceRange({ min: 0, max: 1000000 });
@@ -280,30 +289,27 @@ export const CategoryPage = () => {
 
   // Simple Product Card component
   const ProductCard = ({ product }) => (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-      <div className="relative">
+    <div className="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col">
+      <Link to={`/products/${product.id}`}>
         <img 
           src={product.imageUrl || "/product-placeholder.jpg"} 
           alt={product.name} 
-          className="w-full h-48 object-cover"
+          className="w-full h-48 object-cover hover:scale-105 transition-transform"
         />
-        {product.sale_price && (
-          <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">
-            Sale
-          </div>
-        )}
-      </div>
-      <div className="p-4">
-        <h3 className="font-medium mb-1 truncate">
+      </Link>
+      <div className="p-4 flex-1 flex flex-col">
+        <h3 className="font-medium">
           <Link to={`/products/${product.id}`} className="hover:text-primary">
             {product.name}
           </Link>
         </h3>
-        <div className="flex items-center justify-between">
-          <div>
-            {product.sale_price ? (
-              <div>
-                <span className="text-red-500 font-bold">
+        <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+          {product.description}
+        </p>
+        <div className="text-primary font-semibold mt-2">
+          {product.sale_price
+            ? <>
+                <span>
                   {new Intl.NumberFormat('fr-CM', {
                     style: 'currency',
                     currency: 'XAF',
@@ -317,23 +323,33 @@ export const CategoryPage = () => {
                     minimumFractionDigits: 0
                   }).format(product.price)}
                 </span>
-              </div>
-            ) : (
-              <span className="text-gray-900 font-bold">
-                {new Intl.NumberFormat('fr-CM', {
-                  style: 'currency',
-                  currency: 'XAF',
-                  minimumFractionDigits: 0
-                }).format(product.price)}
-              </span>
-            )}
-          </div>
-          <button 
-            onClick={() => handleAddToCart(product.id)}
-            className="bg-primary text-white px-3 py-1 rounded-md text-sm hover:bg-primary-dark transition-colors"
+              </>
+            : new Intl.NumberFormat('fr-CM', {
+                style: 'currency',
+                currency: 'XAF',
+                minimumFractionDigits: 0
+              }).format(product.price)
+          }
+        </div>
+        <div className="flex-1"></div>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <Button 
+            variant="primary" 
+            size="sm"
+            onClick={() => handleAddToCart(product)}
+            disabled={product.stock_quantity <= 0}
+            className="flex items-center justify-center"
           >
-            Add
-          </button>
+            {t('common.add_to_cart')}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            as={Link}
+            to={`/products/${product.id}`}
+          >
+            {t('common.view_details')}
+          </Button>
         </div>
       </div>
     </div>

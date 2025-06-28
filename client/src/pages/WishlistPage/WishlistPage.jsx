@@ -5,6 +5,7 @@ import { Heart, ShoppingCart, Trash2, ArrowLeft } from "lucide-react";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import { useUI } from "@/context/UIContext";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 
@@ -56,10 +57,18 @@ export const WishlistPage = () => {
     });
   };
 
+  const { addToast, openModal } = useUI();
+
   const handleClearWishlist = async () => {
-    if (window.confirm(t('wishlist.confirm_clear_wishlist'))) {
-      await clearWishlist();
-    }
+    // Simply call clearWishlist directly - no confirmation needed
+    const result = await clearWishlist();
+    
+    // Show a success toast notification when the wishlist is cleared
+    addToast({
+      title: t('wishlist.cleared'),
+      message: t('wishlist.wishlist_cleared'),
+      type: 'success'
+    });
   };
 
   // Show login prompt if not authenticated

@@ -105,6 +105,19 @@ export const ProductDetailPage = () => {
     setQuantity(1);
   }, [product]);
   
+  // Quantity control functions
+  const incrementQuantity = () => {
+    if (product && quantity < product.stock_quantity) {
+      setQuantity(prev => prev + 1);
+    }
+  };
+  
+  const decrementQuantity = () => {
+    if (quantity > 1) {
+      setQuantity(prev => prev - 1);
+    }
+  };
+  
   // Fetch related products
   useEffect(() => {
     const fetchRelatedProducts = async () => {
@@ -178,17 +191,17 @@ export const ProductDetailPage = () => {
     });
   };
   
-  const decrementQuantity = () => {
-    if (quantity > 1) {
-      setQuantity(quantity - 1);
-    }
-  };
+  // const decrementQuantity = () => {
+  //   if (quantity > 1) {
+  //     setQuantity(quantity - 1);
+  //   }
+  // };
   
-  const incrementQuantity = () => {
-    if (quantity < product.stockQuantity) {
-      setQuantity(quantity + 1);
-    }
-  };
+  // const incrementQuantity = () => {
+  //   if (quantity < product.stock_quantity) {
+  //     setQuantity(quantity + 1);
+  //   }
+  // };
 
   // Navigate to next image
   const nextImage = () => {

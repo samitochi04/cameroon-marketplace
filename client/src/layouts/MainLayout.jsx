@@ -1,12 +1,79 @@
-import React from "react";
-import { Outlet, Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Outlet, Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { NavBar } from "@/components/common/NavBar/NavBar";
 import { AuthDebug } from "@/components/debug/AuthDebug";
 import { NavigationListener } from "@/routes/NavigationListener";
+import { useAuth } from "@/context/AuthContext";
+import { useUI } from "@/context/UIContext";
+import { supabase } from "@/lib/supabase";
 
 const MainLayout = () => {
   const { t } = useTranslation();
+  const { user, isAuthenticated } = useAuth();
+  const { addToast } = useUI();
+  const [searchParams] = useSearchParams();
+  
+  // Check for profile completion (only for customers)
+  useEffect(() => {
+    // Don't show notification for vendors, only for logged in customers
+    if (isAuthenticated && user && user.role === 'customer') {
+      const checkProfileCompletion = async () => {
+        try {
+          // Get the user's profile
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          
+          // Check if important profile fields are missing
+          if (profile && (!profile.phonenumber || !profile.address)) {
+            // Show a non-intrusive notification to complete profile
+            addToast({
+              title: t('profile.incomplete_title', 'Profil incomplet'),
+              message: t('profile.complete_profile_msg', 'Completer votre profile'),
+              type: 'info',
+              duration: 8000, // Show for 8 seconds
+            });
+          }
+        } catch (error) {
+          console.error('Error checking profile completion:', error);
+        }
+      };
+      
+      // Run the check after a short delay to not interfere with page loading
+      const timer = setTimeout(() => {
+        checkProfileCompletion();
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, user, addToast, t]);
+  
+  // Show success message after login or password reset
+  useEffect(() => {
+    const loginSuccess = searchParams.get('loginSuccess') === 'true';
+    const passwordResetSuccess = searchParams.get('passwordReset') === 'success';
+    
+    if (loginSuccess && isAuthenticated) {
+      addToast({
+        title: t('auth.login_success_title', 'Connexion réussie'),
+        message: t('auth.login_success_message', 'Vous êtes maintenant connecté'),
+        type: 'success',
+        duration: 4000,
+      });
+    }
+    
+    if (passwordResetSuccess && isAuthenticated) {
+      addToast({
+        title: t('auth.password_update_success', 'Mot de passe mis à jour'),
+        message: t('auth.password_update_message', 'Votre mot de passe a été mis à jour avec succès'),
+        type: 'success',
+        duration: 4000,
+      });
+    }
+  }, [searchParams, isAuthenticated, addToast, t]);
 
   return (
     <>

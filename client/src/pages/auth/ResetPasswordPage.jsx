@@ -69,16 +69,18 @@ const ResetPasswordPage = () => {
     try {
       await confirmPasswordReset(null, data.password);
       
-      // Show success message and redirect to login
-      navigate('/login?reset=success', { 
-        state: { 
-          message: t('auth.password_reset_success') 
-        }
-      });
+      // Show success message and redirect to home page instead of login page
+      // User should already be logged in after password reset
+      setTimeout(() => {
+        setIsLoading(false); // Stop loading before navigating
+        navigate('/?passwordReset=success', { 
+          replace: true
+        });
+      }, 1000);
+      
     } catch (error) {
       console.error('Password reset error:', error);
       setError(error.message || t('auth.password_reset_failed'));
-    } finally {
       setIsLoading(false);
     }
   };

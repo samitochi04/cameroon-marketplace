@@ -123,7 +123,17 @@ const LoginPage = () => {
       setEmailForResend(data.email); // Save email for potential resend
       
       try {
-        await login(data.email, data.password);
+        const loginResult = await login(data.email, data.password);
+        
+        if (loginResult && loginResult.session) {
+          // Set success message and redirect to home page
+          setSuccessMessage('Connexion réussie');
+          
+          // Short delay for better UX, then redirect to home
+          setTimeout(() => {
+            navigate('/?loginSuccess=true', { replace: true });
+          }, 1000);
+        }
       } catch (error) {
         console.log("Login error:", error);
         
@@ -176,7 +186,7 @@ const LoginPage = () => {
       setError('');
       
       await loginWithGoogle();
-      // The redirect will happen automatically, no need to navigate
+      // The redirect will happen via AuthCallbackPage.jsx to home with success param
     } catch (error) {
       console.error('Google login error:', error);
       setError(error.message || t('auth.login_failed'));
@@ -187,9 +197,11 @@ const LoginPage = () => {
   // Use an effect to show success messages based on URL params
   useEffect(() => {
     if (registered) {
-      setSuccessMessage(t('auth.registration_successful'));
+      // Changed message as requested
+      setSuccessMessage('Maintenant connecter vous');
     } else if (verificationRequired) {
-      setSuccessMessage(t('auth.verification_email_sent'));
+      // Changed message as requested
+      setSuccessMessage('Votre compte à été créer avec succes');
     }
     
     // Clear message after 10 seconds
