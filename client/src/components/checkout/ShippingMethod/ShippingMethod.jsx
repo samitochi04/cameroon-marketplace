@@ -10,14 +10,14 @@ export const ShippingMethod = ({ selectedMethod, onSelectMethod }) => {
       id: 'standard',
       name: t('checkout.standard_shipping'),
       price: 0,
-      description: t('checkout.standard_shipping_description'),
+      description: t('checkout.standard_shipping_description', 'Standard delivery in 3-5 business days'),
       icon: <Truck className="h-5 w-5" />
     },
     {
       id: 'express',
       name: t('checkout.express_shipping'),
       price: 0,
-      description: t('checkout.express_shipping_description'),
+      description: t('checkout.express_shipping_description', 'Express delivery in 1-2 business days'),
       icon: <Package className="h-5 w-5" />
     }
   ];
@@ -50,7 +50,7 @@ export const ShippingMethod = ({ selectedMethod, onSelectMethod }) => {
                           currency: 'XAF',
                           minimumFractionDigits: 0
                         }).format(method.price)
-                      : t('free')}
+                      : t('free', 'Free')}
                   </span>
                 </div>
                 <p className="text-sm text-gray-500">{method.description}</p>

@@ -24,11 +24,11 @@ export const OrderReview = ({
   const getShippingMethodName = () => {
     switch(shippingMethod) {
       case 'express':
-        return t('express_shipping');
+        return t('express_shipping', 'Express Shipping');
       case 'pickup':
-        return t('store_pickup');
+        return t('store_pickup', 'Store Pickup');
       default:
-        return t('standard_shipping');
+        return t('standard_shipping', 'Standard Shipping');
     }
   };
   
@@ -39,9 +39,9 @@ export const OrderReview = ({
       case 'orange_money':
         return 'Orange Money';
       case 'credit_card':
-        return t('credit_card');
+        return t('credit_card', 'Credit/Debit Card');
       case 'cod':
-        return t('cash_on_delivery');
+        return t('cash_on_delivery', 'Cash on Delivery');
       default:
         return paymentMethod;
     }
@@ -65,13 +65,13 @@ export const OrderReview = ({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold mb-4">{t('order_review')}</h2>
-        <p className="text-gray-500">{t('review_order_before_payment')}</p>
+        <h2 className="text-xl font-semibold mb-4">{t('order_review', 'Order Review')}</h2>
+        <p className="text-gray-500">{t('review_order_before_payment', 'Please review your order before proceeding to payment')}</p>
       </div>
       
       {/* Order Items */}
       <Card className="p-4">
-        <h3 className="font-medium mb-3">{t('order_items')}</h3>
+        <h3 className="font-medium mb-3">{t('order_items', 'Order Items')}</h3>
         <div className="divide-y divide-gray-200">
           {cartItems.map((item) => (
             <div key={item.id} className="py-3 flex">
@@ -88,8 +88,8 @@ export const OrderReview = ({
                   <p className="ml-4">{formatCurrency(item.price * item.quantity)}</p>
                 </div>
                 <div className="flex justify-between text-sm text-gray-500">
-                  <p>{t('quantity')}: {item.quantity}</p>
-                  <p>{t('price_per_item')}: {formatCurrency(item.price)}</p>
+                  <p>{t('quantity', 'Quantity')}: {item.quantity}</p>
+                  <p>{t('price_per_item', 'Price per item')}: {formatCurrency(item.price)}</p>
                 </div>
                 {item.variant && (
                   <p className="mt-1 text-sm text-gray-500">

@@ -57,7 +57,7 @@ export const PaymentMethod = ({ selectedMethod, onSelectMethod, total }) => {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-4">{t('payment_method')}</h2>
+      <h2 className="text-xl font-semibold mb-4">{t('payment_method', 'Payment Method')}</h2>
       
       <div className="space-y-4 mb-6">
         {paymentOptions.map((option) => {
@@ -114,7 +114,7 @@ export const PaymentMethod = ({ selectedMethod, onSelectMethod, total }) => {
                       </p>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {t('mobile_number')} <span className="text-red-500">*</span>
+                          {t('mobile_number', 'Mobile Number')} <span className="text-red-500">*</span>
                         </label>
                         <Input
                           type="tel"
@@ -138,7 +138,7 @@ export const PaymentMethod = ({ selectedMethod, onSelectMethod, total }) => {
                       </p>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {t('card_number')} <span className="text-red-500">*</span>
+                          {t('card_number', 'Card Number')} <span className="text-red-500">*</span>
                         </label>
                         <Input
                           type="text"
@@ -153,7 +153,7 @@ export const PaymentMethod = ({ selectedMethod, onSelectMethod, total }) => {
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            {t('expiry_date')} <span className="text-red-500">*</span>
+                            {t('expiry_date', 'Expiry Date')} <span className="text-red-500">*</span>
                           </label>
                           <Input
                             type="text"
@@ -167,7 +167,7 @@ export const PaymentMethod = ({ selectedMethod, onSelectMethod, total }) => {
                         
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            {t('cvv')} <span className="text-red-500">*</span>
+                            {t('cvv', 'CVV')} <span className="text-red-500">*</span>
                           </label>
                           <Input
                             type="text"
@@ -182,7 +182,7 @@ export const PaymentMethod = ({ selectedMethod, onSelectMethod, total }) => {
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {t('cardholder_name')} <span className="text-red-500">*</span>
+                          {t('cardholder_name', 'Cardholder Name')} <span className="text-red-500">*</span>
                         </label>
                         <Input
                           type="text"
@@ -205,15 +205,15 @@ export const PaymentMethod = ({ selectedMethod, onSelectMethod, total }) => {
       <div className="mt-4 p-4 bg-gray-50 rounded-lg">
         <h3 className="font-medium mb-2">{t('payment_summary', 'Payment Summary')}</h3>
         <div className="flex justify-between text-sm mb-2">
-          <span>{t('total_amount')}</span>
+          <span>{t('total_amount', 'Total Amount')}</span>
           <span className="font-semibold">{formatCurrency(total)}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span>{t('payment_method')}</span>
+          <span>{t('payment_method', 'Payment Method')}</span>
           <span className="font-semibold">
             {selectedMethod === 'mtn_mobile_money' && 'MTN Mobile Money'}
             {selectedMethod === 'orange_money' && 'Orange Money'}
-            {selectedMethod === 'credit_card' && t('credit_card')}
+            {selectedMethod === 'credit_card' && t('credit_card', 'Credit/Debit Card')}
           </span>
         </div>
         <p className="text-xs text-gray-500 mt-2">

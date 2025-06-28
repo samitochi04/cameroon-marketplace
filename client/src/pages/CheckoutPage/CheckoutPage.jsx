@@ -264,7 +264,7 @@ export const CheckoutPage = () => {
           />
         );
       default:
-        return <div>{t('unknown_step')}</div>;
+        return <div>{t('unknown_step', 'Unknown Step')}</div>;
     }
   };
 
@@ -279,7 +279,7 @@ export const CheckoutPage = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">{t('checkout.checkout')}</h1>
+      <h1 className="text-3xl font-bold mb-6">{t('checkout.checkout', 'Checkout')}</h1>
       
       {/* Error message */}
       {orderError && (
@@ -287,14 +287,15 @@ export const CheckoutPage = () => {
           {orderError}
         </div>
       )}
-        {/* Checkout steps */}
+      
+      {/* Checkout steps - Ensure we provide string values, not objects */}
       <CheckoutSteps 
         steps={[
-          t('address'),
-          t('shipping'),
-          t('review'),
-          t('payment')
-        ]} 
+          t('address', 'Address') || 'Address',
+          t('shipping', 'Shipping') || 'Shipping',
+          t('review', 'Review') || 'Review',
+          t('payment', 'Payment') || 'Payment'
+        ].map(item => typeof item === 'string' ? item : 'Step')} 
         currentStep={currentStep} 
       />
       
@@ -313,7 +314,7 @@ export const CheckoutPage = () => {
                     onClick={prevStep}
                     disabled={isSubmitting}
                   >
-                    {t('back')}
+                    {t('back', 'Back')}
                   </Button>
                 )}
                 
@@ -324,8 +325,9 @@ export const CheckoutPage = () => {
                     disabled={!canProceed()}
                     className="ml-auto"
                   >
-                    {t('continue')}
-                  </Button>                ) : (
+                    {t('continue', 'Continue')}
+                  </Button>                
+                ) : (
                   <Button 
                     variant="primary"
                     onClick={handlePay}
@@ -333,7 +335,7 @@ export const CheckoutPage = () => {
                     isLoading={isSubmitting}
                     className="ml-auto"
                   >
-                    {t('place_order')}
+                    {t('place_order', 'Place Order')}
                   </Button>
                 )}
               </div>
@@ -344,7 +346,7 @@ export const CheckoutPage = () => {
         {/* Order summary */}
         <div>
           <Card className="p-6 sticky top-4">
-            <h2 className="text-xl font-semibold mb-4">{t('checkout.order_summary')}</h2>
+            <h2 className="text-xl font-semibold mb-4">{t('checkout.order_summary', 'Order Summary')}</h2>
             
             <div className="space-y-2 border-b border-gray-200 pb-4 mb-4">
               {console.log('cartItems:', JSON.stringify(cartItems, null, 2))}
@@ -367,7 +369,7 @@ export const CheckoutPage = () => {
             
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span>{t('subtotal')}</span>
+                <span>{t('subtotal', 'Subtotal')}</span>
                 <span>
                   {formatCurrency(subtotal)}
                 </span>
@@ -383,23 +385,23 @@ export const CheckoutPage = () => {
               )} */}
               
               <div className="flex justify-between">
-                <span>{t('shipping')}</span>
-                <span className="text-green-600">{t('free')}</span>
+                <span>{t('shipping', 'Shipping')}</span>
+                <span className="text-green-600">{t('free', 'Free')}</span>
                 
                 {/* Show shipping method name if selected */}
                 {shippingMethod && (
                   <span className="text-xs text-gray-500 ml-1">
                     ({shippingMethod === 'express' 
-                      ? t('checkout.express_shipping')
+                      ? t('checkout.express_shipping', 'Express Shipping')
                       : shippingMethod === 'pickup'
-                      ? t('checkout.store_pickup')
-                      : t('checkout.standard_shipping')})
+                      ? t('checkout.store_pickup', 'Store Pickup')
+                      : t('checkout.standard_shipping', 'Standard Shipping')})
                   </span>
                 )}
               </div>
               
               <div className="flex justify-between font-bold pt-2 border-t border-gray-200 text-lg">
-                <span>{t('total')}</span>
+                <span>{t('total', 'Total')}</span>
                 <span>
                   {formatCurrency(subtotal + shippingCost )}
                 </span>

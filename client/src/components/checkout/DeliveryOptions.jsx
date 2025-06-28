@@ -8,30 +8,30 @@ export const DeliveryOptions = ({ selectedMethod, onSelectMethod }) => {
   const deliveryMethods = [
     {
       id: 'standard',
-      name: t('standard_shipping'),
+      name: t('standard_shipping', 'Standard Shipping'),
       price: 0,
-      description: t('delivery_time_standard', { days: '3-5' }),
+      description: t('delivery_time_standard', { days: '3-5' }, 'Delivery in 3-5 days'),
       icon: <Truck className="h-5 w-5" />
     },
     {
       id: 'express',
-      name: t('express_shipping'),
+      name: t('express_shipping', 'Express Shipping'),
       price: 0,
-      description: t('delivery_time_express', { days: '1-2' }),
+      description: t('delivery_time_express', { days: '1-2' }, 'Delivery in 1-2 days'),
       icon: <Home className="h-5 w-5" /> 
     },
     {
       id: 'pickup',
-      name: t('store_pickup'),
+      name: t('store_pickup', 'Store Pickup'),
       price: 0,
-      description: t('pickup_time', { hours: 24 }),
+      description: t('pickup_time', { hours: 24 }, 'Pickup in 24 hours'),
       icon: <ShoppingBag className="h-5 w-5" /> 
     }
   ];
 
   return (
     <div className="mb-6">
-      <h2 className="text-lg font-semibold mb-3">{t('delivery_options')}</h2>
+      <h2 className="text-lg font-semibold mb-3">{t('delivery_options', 'Delivery Options')}</h2>
       <div className="space-y-3">
         {deliveryMethods.map((method) => (
           <div
@@ -57,7 +57,7 @@ export const DeliveryOptions = ({ selectedMethod, onSelectMethod }) => {
                           currency: 'XAF',
                           minimumFractionDigits: 0
                         }).format(method.price)
-                      : t('free')}
+                      : t('free', 'Free')}
                   </span>
                 </div>
                 <p className="text-sm text-gray-500">{method.description}</p>
