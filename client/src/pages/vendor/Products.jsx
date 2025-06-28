@@ -3,10 +3,13 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Search, Filter, Plus, ShoppingBag, Edit, Archive, AlertTriangle, Check, X } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 const VendorProducts = () => {
   const { t } = useTranslation();
   const { get, post } = useApi();
+  const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -15,6 +18,30 @@ const VendorProducts = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
+  const [vendorStatus, setVendorStatus] = useState(null);
+
+  useEffect(() => {
+    const fetchVendorStatus = async () => {
+      if (!user || !user.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('vendors')
+          .select('status')
+          .eq('id', user.id)
+          .single();
+        
+        if (error) throw error;
+        
+        setVendorStatus(data?.status || 'pending');
+      } catch (error) {
+        console.error('Error fetching vendor status:', error);
+        setVendorStatus('pending'); // Default to pending if there's an error
+      }
+    };
+    
+    fetchVendorStatus();
+  }, [user]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -132,13 +159,20 @@ const VendorProducts = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">{t('vendor.my_products')}</h1>
         
-        <Link 
-          to="/vendor-portal/products/new"
-          className="mt-3 md:mt-0 inline-flex items-center px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          {t('vendor.add_new_product')}
-        </Link>
+        {vendorStatus === 'approved' ? (
+          <Link 
+            to="/vendor-portal/products/new"
+            className="mt-3 md:mt-0 inline-flex items-center px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {t('vendor.add_new_product')}
+          </Link>
+        ) : (
+          <div className="mt-3 md:mt-0 inline-flex items-center px-4 py-2 bg-gray-200 text-gray-500 rounded-md cursor-not-allowed" title={t('vendor.pending_approval')}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('vendor.add_new_product')}
+          </div>
+        )}
       </div>
       
       {/* Filters */}
@@ -320,7 +354,7 @@ const VendorProducts = () => {
             >
               {t('clear_filters')}
             </button>
-          ) : (
+          ) : vendorStatus === 'approved' ? (
             <Link
               to="/vendor-portal/products/new"
               className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
@@ -328,6 +362,14 @@ const VendorProducts = () => {
               <Plus className="h-4 w-4 mr-2" />
               {t('add_new_product')}
             </Link>
+          ) : (
+            <div 
+              className="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-500 rounded-md cursor-not-allowed"
+              title={t('vendor.pending_approval')}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t('add_new_product')}
+            </div>
           )}
         </div>
       )}

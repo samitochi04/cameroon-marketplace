@@ -8,6 +8,17 @@ import { Card } from "@/components/ui/Card";
 import { supabase } from '@/lib/supabase';
 import { useSupabaseRefresh } from '@/lib/supabase';
 import { useRouteChange } from '@/hooks/useRouteChange';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+
+// Helper function to shuffle an array
+const shuffleArray = (array) => {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+};
 
 // Mock data as fallback
 const MOCK_PRODUCTS = [
@@ -71,6 +82,7 @@ export const HomePage = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const isMobile = useMediaQuery('(max-width: 640px)');
   
   // Get cart functions from context
   const { addToCart, cartItemsCount } = useCart();
@@ -94,7 +106,7 @@ export const HomePage = () => {
             .select('id, name, price, sale_price, images, stock_quantity, slug, vendor_id, status')
             .eq('is_featured', true)
             .eq('status', 'published')
-            .limit(8);
+            .gt('stock_quantity', 0); // Only fetch in-stock products
             
           if (productsError) throw productsError;
           
@@ -141,8 +153,12 @@ export const HomePage = () => {
             };
           });
           
+          // Shuffle the products and limit to 8
+          const shuffledProducts = shuffleArray(processedProducts);
+          const limitedProducts = shuffledProducts.slice(0, 8);
+          
           // Use fetched data or fallback to mock data
-          setFeaturedProducts(processedProducts?.length ? processedProducts : MOCK_PRODUCTS);
+          setFeaturedProducts(limitedProducts?.length ? limitedProducts : MOCK_PRODUCTS);
           setCategories(categoriesData?.length ? categoriesData : MOCK_CATEGORIES);
           setTopVendors(vendorsData?.length ? vendorsData : []);
           
@@ -245,7 +261,7 @@ export const HomePage = () => {
             className="flex items-center justify-center"
           >
             <ShoppingCart className="w-4 h-4 mr-1" />
-            {t("common.add_to_cart")}
+            {!isMobile && t("common.add_to_cart")}
           </Button>
           <Button
             variant="outline"

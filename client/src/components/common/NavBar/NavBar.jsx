@@ -22,7 +22,7 @@ export const NavBar = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
   const { cartItemsCount } = useCart();
-  const { wishlistCount } = useWishlist(); // Add this line
+  const { wishlistCount } = useWishlist();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -55,6 +55,8 @@ export const NavBar = () => {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+      // Close mobile menu when search is submitted
+      setMobileMenuOpen(false);
     }
   };
 
@@ -65,6 +67,10 @@ export const NavBar = () => {
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
+  };
+  
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
   };
 
   const toggleUserMenu = (e) => {
@@ -83,10 +89,22 @@ export const NavBar = () => {
       await logout();
       navigate("/");
       setUserMenuOpen(false);
+      setMobileMenuOpen(false);
     } catch (error) {
       console.error("Logout error:", error);
     }
   };
+  
+  // Modified navigation link component that closes mobile menu when clicked
+  const MobileNavLink = ({ to, children }) => (
+    <Link
+      to={to}
+      className="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-50"
+      onClick={closeMobileMenu}
+    >
+      {children}
+    </Link>
+  );
 
   return (
     <>
@@ -108,7 +126,7 @@ export const NavBar = () => {
 
               {/* Logo  */}
               <div className="flex-shrink-0 flex items-center py-2">
-                <Link to="/" className="flex items-center">
+                <Link to="/" className="flex items-center" onClick={closeMobileMenu}>
                   <img
                     className="h-16 sm:h-20 w-auto"
                     src="/assets/logo.svg"
@@ -333,57 +351,36 @@ export const NavBar = () => {
         {mobileMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 border-t border-gray-200">
-              <Link
-                to="/products"
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-50"
-              >
+              <MobileNavLink to="/products">
                 {t("common.products")}
-              </Link>
-              <Link
-                to="/categories"
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-50"
-              >
+              </MobileNavLink>
+              <MobileNavLink to="/categories">
                 {t("common.categories")}
-              </Link>
-              <Link
-                to="/vendors"
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-50"
-              >
+              </MobileNavLink>
+              <MobileNavLink to="/vendors">
                 {t("vendors.vendors")}
-              </Link>
+              </MobileNavLink>
 
               {isAuthenticated ? (
                 <>
-                  <Link
-                    to="/account/dashboard"
-                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-50"
-                  >
+                  <MobileNavLink to="/account/dashboard">
                     {t("profile.my_profile")}
-                  </Link>
-                  <Link
-                    to="/account/orders"
-                    className="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-50"
-                  >
+                  </MobileNavLink>
+                  <MobileNavLink to="/account/orders">
                     {t("orders.my_orders")}
-                  </Link>
+                  </MobileNavLink>
 
                   {user.role === "vendor" && (
-                    <Link
-                      to="/vendor-portal"
-                      className="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-50"
-                    >
+                    <MobileNavLink to="/vendor-portal">
                       <Store size={16} className="inline mr-2" />
                       {t("vendors.vendor_portal")}
-                    </Link>
+                    </MobileNavLink>
                   )}
 
                   {user.role === "admin" && (
-                    <Link
-                      to="/admin"
-                      className="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-50"
-                    >
+                    <MobileNavLink to="/admin">
                       {t("admin_dashboard")}
-                    </Link>
+                    </MobileNavLink>
                   )}
 
                   <button
@@ -394,12 +391,9 @@ export const NavBar = () => {
                   </button>
                 </>
               ) : (
-                <Link
-                  to="/login"
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-900 hover:bg-gray-50"
-                >
+                <MobileNavLink to="/login">
                   {t("auth.login")}
-                </Link>
+                </MobileNavLink>
               )}
             </div>
           </div>

@@ -7,6 +7,7 @@ import { useCart } from "@/context/CartContext";
 import { Link, useLocation } from "react-router-dom";
 import { Input } from "@/components/ui/Input";
 import { useRouteChange } from "@/hooks/useRouteChange";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 // Mock data as fallback
 const MOCK_PRODUCTS = [
@@ -21,6 +22,7 @@ const MOCK_PRODUCTS = [
 export const ProductListPage = () => {
   const { t } = useTranslation();
   const location = useLocation();
+  const isMobile = useMediaQuery('(max-width: 640px)');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [products, setProducts] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
@@ -48,6 +50,7 @@ export const ProductListPage = () => {
           .from('products')
           .select('id, name, price, sale_price, images, stock_quantity, slug, vendor_id, status, description, category_id')
           .eq('status', 'published')
+          .gt('stock_quantity', 0) // Only fetch in-stock products
           .order('created_at', { ascending: false });
 
         // Fetch categories
