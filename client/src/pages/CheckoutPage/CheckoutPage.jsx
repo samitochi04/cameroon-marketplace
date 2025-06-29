@@ -23,7 +23,7 @@ const SHIPPING_PRICES = {
   pickup: 0
 };
 
-const STEPS = ['address', 'shipping', 'review', 'payment']; // Add payment step back
+const STEPS = ['address', 'shipping', 'review']; // Removed payment step - go directly to payment page
 
 export const CheckoutPage = () => {
   const { t } = useTranslation();
@@ -92,12 +92,12 @@ export const CheckoutPage = () => {
     }
   }, [user, methods]);
 
-  // Redirect to cart if cart is empty
+  // Redirect to cart if cart is empty (but not during checkout process)
   useEffect(() => {
-    if (isEmpty) {
+    if (isEmpty && !isSubmitting) {
       navigate('/cart');
     }
-  }, [isEmpty, navigate]);
+  }, [isEmpty, navigate, isSubmitting]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -167,44 +167,57 @@ export const CheckoutPage = () => {
     };
 
     try {
-
-      // Get auth token for authenticated request
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('Authentication required');
-      }
-
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/orders`,
-        orderData,
-        {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      // Store order data in localStorage for payment processing
+      const orderDataForPayment = {
+        ...orderData,
+        amount: total
+      };
       
-      if (response.data?.success) {
-        // Clear cart after successful order creation
-        clearCart();
-        
-        // In development mode, go directly to confirmation
-        if (isDevelopmentMode) {
-          navigate(`/order-confirmation/${response.data.order.id}`);
-        } else {
-          // In production mode, redirect to payment page with order ID
-          navigate(`/payment/${response.data.order.id}`, {
-            state: {
-              orderId: response.data.order.id,
-              amount: total,
-              paymentMethod: paymentMethod,
-              customerInfo: formData.shippingAddress
+      localStorage.setItem('pendingOrder', JSON.stringify(orderDataForPayment));
+      
+      // Generate a temporary order ID for the payment flow
+      const tempOrderId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // In development mode, simulate successful order creation
+      if (isDevelopmentMode) {
+        // Get auth token for authenticated request
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          throw new Error('Authentication required');
+        }
+
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/orders`,
+          orderData,
+          {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json'
             }
-          });
+          }
+        );
+        
+        if (response.data?.success) {
+          // Clear cart after successful order creation
+          clearCart();
+          navigate(`/order-confirmation/${response.data.order.id}`);
         }
       } else {
-        setOrderError(response.data.message || 'Failed to create order.');
+        // In production mode, redirect to payment page first
+        // Order will be created after successful payment
+        navigate(`/payment/${tempOrderId}`, {
+          state: {
+            orderId: tempOrderId,
+            amount: total,
+            paymentMethod: paymentMethod,
+            customerInfo: formData.shippingAddress
+          }
+        });
+        
+        // Clear cart after navigation is initiated
+        setTimeout(() => {
+          clearCart();
+        }, 100);
       }
     } catch (error) {
       console.error('Order creation error:', error);
@@ -251,15 +264,7 @@ export const CheckoutPage = () => {
                 : methods.getValues('billingAddress')
             }
             shippingMethod={shippingMethod}
-            paymentMethod={paymentMethod}
-          />
-        );
-      case 3:
-        return (
-          <PaymentMethod 
-            selectedMethod={paymentMethod} 
-            onSelectMethod={handlePaymentMethodChange}
-            total={total}
+            paymentMethod="mobile_money"
           />
         );
       default:
@@ -292,8 +297,7 @@ export const CheckoutPage = () => {
         steps={[
           t('address', 'Address') || 'Address',
           t('shipping', 'Shipping') || 'Shipping',
-          t('review', 'Review') || 'Review',
-          t('payment', 'Payment') || 'Payment'
+          t('review', 'Review') || 'Review'
         ].map(item => typeof item === 'string' ? item : 'Step')} 
         currentStep={currentStep} 
       />
@@ -334,7 +338,7 @@ export const CheckoutPage = () => {
                     isLoading={isSubmitting}
                     className="ml-auto"
                   >
-                    {t('place_order', 'Place Order')}
+                    {t('continue_to_payment', 'Continue to Payment')}
                   </Button>
                 )}
               </div>

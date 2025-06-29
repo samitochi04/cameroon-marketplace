@@ -21,6 +21,8 @@ class EmailService {
         console.error('Email transporter configuration error:', error);
       } else {
         console.log('Email server is ready to send messages');
+        // Create default templates if needed
+        this.createDefaultTemplates();
       }
     });
   }
@@ -456,12 +458,180 @@ class EmailService {
     }
   }
   
+  // Send order confirmation email to customer in French
+  async sendOrderConfirmationEmail(customerId, orderId, orderData) {
+    try {
+      // Get customer profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email, name')
+        .eq('id', customerId)
+        .single();
+      
+      if (profileError || !profile) {
+        console.error('Customer profile not found:', profileError);
+        return false;
+      }
+
+      // French email template for order confirmation
+      const emailSubject = `Confirmation de votre commande #${orderId}`;
+      const emailBody = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Confirmation de commande</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #f8f9fa; padding: 20px; text-align: center; border-radius: 8px; }
+            .content { padding: 20px 0; }
+            .order-details { background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; }
+            .footer { border-top: 1px solid #ddd; padding-top: 20px; text-align: center; color: #666; }
+            .btn { background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Merci pour votre commande !</h1>
+            </div>
+            
+            <div class="content">
+              <p>Bonjour ${profile.name || 'Cher(e) client(e)'},</p>
+              
+              <p>Nous avons bien reçu votre commande et elle est maintenant <strong>en cours de traitement</strong>.</p>
+              
+              <div class="order-details">
+                <h3>Détails de votre commande :</h3>
+                <p><strong>Numéro de commande :</strong> #${orderId}</p>
+                <p><strong>Date :</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
+                <p><strong>Montant total :</strong> ${orderData.totalAmount ? new Intl.NumberFormat('fr-CM', { style: 'currency', currency: 'XAF' }).format(orderData.totalAmount) : 'N/A'}</p>
+                <p><strong>Méthode de paiement :</strong> ${orderData.paymentMethod === 'mtn_mobile_money' ? 'MTN Mobile Money' : orderData.paymentMethod === 'orange_money' ? 'Orange Money' : orderData.paymentMethod}</p>
+              </div>
+              
+              <p>Votre commande sera traitée dans les plus brefs délais. Vous recevrez une notification dès qu'elle sera expédiée.</p>
+              
+              <p>Si vous avez des questions concernant votre commande, n'hésitez pas à nous contacter.</p>
+              
+              <p>Merci de faire confiance à notre marketplace camerounaise !</p>
+            </div>
+            
+            <div class="footer">
+              <p>Cameroon Marketplace</p>
+              <p>Votre marketplace local de confiance</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+      
+      // Send email
+      const mailOptions = {
+        from: {
+          name: 'Cameroon Marketplace',
+          address: process.env.SMTP_FROM || process.env.SMTP_USER
+        },
+        to: profile.email,
+        subject: emailSubject,
+        html: emailBody,
+        text: `Bonjour ${profile.name || 'Cher(e) client(e)'},\n\nNous avons bien reçu votre commande #${orderId} et elle est maintenant en cours de traitement.\n\nMontant total: ${orderData.totalAmount ? new Intl.NumberFormat('fr-CM', { style: 'currency', currency: 'XAF' }).format(orderData.totalAmount) : 'N/A'}\n\nMerci de faire confiance à notre marketplace camerounaise!\n\nCameroon Marketplace`
+      };
+      
+      if (this.transporter) {
+        const info = await this.transporter.sendMail(mailOptions);
+        console.log('Order confirmation email sent:', info.messageId);
+        return true;
+      } else {
+        console.log('Email transporter not configured, email not sent');
+        return false;
+      }
+      
+    } catch (error) {
+      console.error('Error sending order confirmation email:', error);
+      return false;
+    }
+  }
+
+  // Create default email templates if they don't exist
+  async createDefaultTemplates() {
+    try {
+      const templates = [
+        {
+          name: 'order_confirmation',
+          subject: 'Order Confirmation - #{{order_id}}',
+          body: `
+            <h2>Thank you for your order!</h2>
+            <p>Dear {{customer_name}},</p>
+            <p>Your order <strong>#{{order_id}}</strong> has been confirmed and payment has been received.</p>
+            
+            <h3>Order Details:</h3>
+            <ul>
+              <li><strong>Order Date:</strong> {{order_date}} at {{order_time}}</li>
+              <li><strong>Payment Method:</strong> {{payment_method}}</li>
+              <li><strong>Total Amount:</strong> {{order_total}} FCFA</li>
+              <li><strong>Status:</strong> {{order_status}}</li>
+            </ul>
+            
+            <p>You can track your order status at: <a href="{{tracking_url}}">{{tracking_url}}</a></p>
+            
+            <p>Thank you for choosing Cameroon Marketplace!</p>
+            <p>Best regards,<br>The Cameroon Marketplace Team</p>
+          `,
+          language: 'en'
+        },
+        {
+          name: 'vendor_new_order',
+          subject: 'New Order Received - #{{order_id}}',
+          body: `
+            <h2>New Order Notification</h2>
+            <p>Dear {{vendor_name}},</p>
+            <p>You have received a new order for {{store_name}}!</p>
+            
+            <h3>Order Details:</h3>
+            <ul>
+              <li><strong>Order ID:</strong> #{{order_id}}</li>
+              <li><strong>Customer:</strong> {{customer_name}}</li>
+              <li><strong>Items:</strong> {{order_items_count}} item(s)</li>
+              <li><strong>Total Amount:</strong> {{order_total}} FCFA</li>
+              <li><strong>Order Date:</strong> {{order_date}} at {{order_time}}</li>
+            </ul>
+            
+            <p>Please log in to your vendor dashboard to process this order: <a href="{{dashboard_url}}">{{dashboard_url}}</a></p>
+            
+            <p>Best regards,<br>The Cameroon Marketplace Team</p>
+          `,
+          language: 'en'
+        }
+      ];
+
+      for (const template of templates) {
+        // Check if template exists
+        const { data: existing } = await supabase
+          .from('email_templates')
+          .select('id')
+          .eq('name', template.name)
+          .eq('language', template.language)
+          .single();
+
+        if (!existing) {
+          await supabase
+            .from('email_templates')
+            .insert(template);
+          console.log(`Created email template: ${template.name}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error creating default email templates:', error);
+    }
+  }
+
   // Generic method to send any email
   async sendEmail(to, subject, htmlBody, textBody = null) {
     try {
       const mailOptions = {
         from: {
-          name: 'Cameroon Marketplace',
+          name: 'Axis Shop',
           address: process.env.SMTP_FROM || process.env.SMTP_USER
         },
         to: to,

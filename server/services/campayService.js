@@ -19,12 +19,30 @@ exports.createCampayPayment = async (paymentInfo) => {
         
         if (!token) {
             console.warn('Missing Campay token. Using development mode.');
+            
+            // Detect operator from phone number for mock response
+            const phoneToCheck = phone_number.replace(/\D/g, '').replace(/^237/, '');
+            const firstTwoDigits = phoneToCheck.substring(0, 2);
+            const firstDigit = phoneToCheck.substring(0, 1);
+            
+            let mockOperator = 'MTN'; // Default
+            
+            // Orange prefixes: 55-59, 69, 9
+            if (['55', '56', '57', '58', '59', '69'].includes(firstTwoDigits) || firstDigit === '9') {
+                mockOperator = 'ORANGE';
+            }
+            // MTN prefixes: 50-54, 65, 67, 68, 7, 8
+            else if (['50', '51', '52', '53', '54', '65', '67', '68'].includes(firstTwoDigits) || ['7', '8'].includes(firstDigit)) {
+                mockOperator = 'MTN';
+            }
+            
             // Return mock data for development
             return {
                 reference: `dev_ref_${Date.now()}`,
                 status: 'PENDING',
                 code: `CP${Date.now()}`,
-                operator: 'MTN'
+                operator: mockOperator,
+                ussd_code: mockOperator === 'MTN' ? '*126#' : '#144#'
             };
         }
         
@@ -55,13 +73,14 @@ exports.createCampayPayment = async (paymentInfo) => {
         }
         
         const payload = {
-            amount: adjustedAmount.toString(),
+            amount: adjustedAmount,  // Campay expects integer, not string
             from: formattedPhone,
             description: description || `Payment for order #${transaction_id}`,
             external_reference: external_reference || transaction_id.toString()
         };
 
         console.log('Sending to Campay:', payload);
+        console.log('Using token:', token ? token.substring(0, 10) + '...' : 'No token');
         
         const response = await axios.post(
             `${CAMPAY_BASE_URL}/api/collect/`,
@@ -74,7 +93,8 @@ exports.createCampayPayment = async (paymentInfo) => {
             }
         );
         
-        console.log('Campay response:', response.data);
+        console.log('Campay response status:', response.status);
+        console.log('Campay response data:', response.data);
         
         if (response.data && response.data.reference) {
             return {
@@ -85,20 +105,57 @@ exports.createCampayPayment = async (paymentInfo) => {
                 ussd_code: response.data.ussd_code
             };
         } else {
-            throw new Error('Campay payment creation failed: ' + JSON.stringify(response.data));
+            console.error('Campay payment creation failed:', response.data);
+            throw new Error(`Campay payment failed: ${response.data.message || JSON.stringify(response.data)}`);
         }
     } catch (error) {
         console.error('Error creating Campay payment:', error);
+        console.error('Error response status:', error.response?.status);
         console.error('Error response data:', error.response?.data);
+        
+        // Provide meaningful error messages based on Campay error codes
+        if (error.response?.data?.error_code) {
+            const errorCode = error.response.data.error_code;
+            switch (errorCode) {
+                case 'ER101':
+                    throw new Error('Invalid phone number. Please ensure it starts with 237 and is a valid Cameroon number.');
+                case 'ER102':
+                    throw new Error('Unsupported phone number. Only MTN and Orange numbers are accepted.');
+                case 'ER201':
+                    throw new Error('Invalid amount. Please use a valid amount (demo limit: 100 XAF).');
+                case 'ER301':
+                    throw new Error('Insufficient balance in payment system.');
+                default:
+                    throw new Error(`Payment failed: ${error.response.data.message || errorCode}`);
+            }
+        }
         
         // Provide fallback for development or demo limitations
         if (process.env.NODE_ENV !== 'production' || error.response?.data?.error_code === 'ER201') {
             console.log('Using mock payment data for development or demo limitation');
+            
+            // Detect operator from phone number for mock response
+            const phoneToCheck = phone_number.replace(/\D/g, '').replace(/^237/, '');
+            const firstTwoDigits = phoneToCheck.substring(0, 2);
+            const firstDigit = phoneToCheck.substring(0, 1);
+            
+            let mockOperator = 'MTN'; // Default
+            
+            // Orange prefixes: 55-59, 69, 9
+            if (['55', '56', '57', '58', '59', '69'].includes(firstTwoDigits) || firstDigit === '9') {
+                mockOperator = 'ORANGE';
+            }
+            // MTN prefixes: 50-54, 65, 67, 68, 7, 8
+            else if (['50', '51', '52', '53', '54', '65', '67', '68'].includes(firstTwoDigits) || ['7', '8'].includes(firstDigit)) {
+                mockOperator = 'MTN';
+            }
+            
             return {
                 reference: `mock_ref_${Date.now()}`,
                 status: 'PENDING',
                 code: `CP${Date.now()}`,
-                operator: 'MTN'
+                operator: mockOperator,
+                ussd_code: mockOperator === 'MTN' ? '*126#' : '#144#'
             };
         }
         throw error;
@@ -109,13 +166,18 @@ exports.checkPaymentStatus = async (reference) => {
     try {
         const token = process.env.CAMPAY_TOKEN;
         
+        console.log('Checking payment status for reference:', reference);
+        console.log('Campay token present:', !!token);
+        
         if (!token || reference.startsWith('mock_') || reference.startsWith('dev_')) {
             console.warn('Missing Campay token or mock reference. Using development mode.');
-            return {
+            const mockResult = {
                 reference,
                 status: 'SUCCESSFUL',
                 operator: 'MTN'
             };
+            console.log('Returning mock successful payment:', mockResult);
+            return mockResult;
         }
         
         const response = await axios.get(
@@ -136,11 +198,14 @@ exports.checkPaymentStatus = async (reference) => {
         
         // Fallback for development or mock references
         if (process.env.NODE_ENV !== 'production' || reference.startsWith('mock_') || reference.startsWith('dev_')) {
-            return {
+            // Simulate successful payment after some time for realistic testing
+            const mockResult = {
                 reference,
                 status: 'SUCCESSFUL',
-                operator: 'MTN'
+                operator: 'MTN' // Default to MTN for mock responses
             };
+            console.log('Returning mock successful payment:', mockResult);
+            return mockResult;
         }
         throw error;
     }

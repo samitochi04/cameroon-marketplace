@@ -30,7 +30,7 @@ const buttonVariants = cva(
 );
 
 const Button = forwardRef(
-  ({ className, variant, size, leftIcon, rightIcon, as, children, ...props }, ref) => {
+  ({ className, variant, size, leftIcon, rightIcon, as, children, isLoading, ...props }, ref) => {
     const Comp = as || "button";
     
     // Render icon components properly

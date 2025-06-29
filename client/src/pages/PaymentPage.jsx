@@ -7,6 +7,7 @@ import { orderService } from '../services/orderService';
 import { Button } from '@/components/ui/Button';
 import { CampayCheckout } from '@/components/payment/CampayCheckout';
 import { Input } from '@/components/ui/Input';
+import { toast } from 'react-toastify';
 
 const PaymentPage = () => {
   const { t } = useTranslation();
@@ -114,9 +115,38 @@ const PaymentPage = () => {
   
   // Validate payment information before proceeding
   const validatePaymentInfo = () => {
-    if (!paymentInfo.mobileNumber || paymentInfo.mobileNumber.length < 8) {
-      return t('enter_valid_phone_number');
+    const phoneNumber = paymentInfo.mobileNumber.trim();
+    
+    if (!phoneNumber) {
+      return 'Please enter your phone number';
     }
+    
+    // Remove all non-digit characters for validation
+    const cleanedPhone = phoneNumber.replace(/\D/g, '');
+    
+    // Check if it's a valid Cameroon number (should be 9 digits after 237)
+    if (cleanedPhone.length < 9) {
+      return 'Phone number is too short. Please enter a valid Cameroon mobile number (9 digits).';
+    }
+    
+    if (cleanedPhone.length > 12) {
+      return 'Phone number is too long. Please enter a valid Cameroon mobile number.';
+    }
+    
+    // Check if it starts with valid MTN or Orange prefixes for Cameroon
+    const withoutCountryCode = cleanedPhone.startsWith('237') ? cleanedPhone.substring(3) : cleanedPhone;
+    
+    if (withoutCountryCode.length !== 9) {
+      return 'Please enter a valid 9-digit Cameroon mobile number.';
+    }
+    
+    const validPrefixes = ['67', '68', '69', '65', '66', '64']; // MTN and Orange prefixes
+    const prefix = withoutCountryCode.substring(0, 2);
+    
+    if (!validPrefixes.includes(prefix)) {
+      return 'Invalid phone number. Please enter a valid MTN (67/68/69) or Orange (65/66/64) number.';
+    }
+    
     return null;
   };
   
@@ -124,6 +154,9 @@ const PaymentPage = () => {
     const validationError = validatePaymentInfo();
     if (validationError) {
       setError(validationError);
+      toast.error(`❌ ${validationError}`, {
+        autoClose: 6000
+      });
       return;
     }
 
@@ -131,6 +164,8 @@ const PaymentPage = () => {
     const raw = paymentInfo.mobileNumber.trim();
     const cleaned = raw.replace(/\D/g, ''); // remove non-digits
     const formatted = cleaned.startsWith('237') ? cleaned : `237${cleaned}`;
+    
+    console.log('Formatted phone number for payment:', formatted);
     
     setPaymentInfo(prev => ({
       ...prev,
@@ -233,13 +268,13 @@ const PaymentPage = () => {
                     name="mobileNumber"
                     value={paymentInfo.mobileNumber}
                     onChange={handleChange}
-                    placeholder="e.g., 6XXXXXXXX"
+                    placeholder="675XXXXXX or 237675XXXXXX"
                     className="w-full"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     {selectedPaymentMethod === 'mtn_mobile_money'
-                      ? t('mtn_number_hint', 'Enter your MTN number without country code (237)')
-                      : t('orange_number_hint', 'Enter your Orange number without country code (237)')}
+                      ? 'Enter your MTN number (67/68/69). Country code (237) is optional.'
+                      : 'Enter your Orange number (65/66/64). Country code (237) is optional.'}
                   </p>
                 </div>
               </div>

@@ -103,12 +103,11 @@ export const AddressForm = () => {
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('checkout.more_info', 'Region')} <span className="text-red-500">*</span>
+              {t('checkout.more_info', 'More Information (Optional)')}
             </label>
             <Input
-              {...register('shippingAddress.region', {
-                required: t('region_required', 'Region is required')
-              })}
+              {...register('shippingAddress.region')}
+              placeholder={t('region_or_additional_info', 'Region or additional delivery information')}
               error={errors.shippingAddress?.region?.message}
             />
           </div>
@@ -197,12 +196,11 @@ export const AddressForm = () => {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('region', 'Region')} <span className="text-red-500">*</span>
+                {t('region', 'More Information (Optional)')}
               </label>
               <Input
-                {...register('billingAddress.region', {
-                  required: !sameAsShipping ? t('region_required', 'Region is required') : false
-                })}
+                {...register('billingAddress.region')}
+                placeholder={t('region_or_additional_info', 'Region or additional delivery information')}
                 error={errors.billingAddress?.region?.message}
               />
             </div>

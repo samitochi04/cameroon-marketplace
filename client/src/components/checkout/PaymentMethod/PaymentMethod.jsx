@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CreditCard, SmartphoneNfc, Smartphone } from 'lucide-react';
+import { SmartphoneNfc, Smartphone } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 
 export const PaymentMethod = ({ selectedMethod, onSelectMethod, total }) => {
@@ -9,10 +9,6 @@ export const PaymentMethod = ({ selectedMethod, onSelectMethod, total }) => {
   // Add state for payment information
   const [paymentInfo, setPaymentInfo] = useState({
     mobileNumber: '',
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
-    cardholderName: '',
   });
   
   // Handle payment info changes
@@ -24,7 +20,7 @@ export const PaymentMethod = ({ selectedMethod, onSelectMethod, total }) => {
     }));
   };
   
-  // Payment method options (removed COD)
+  // Payment method options - Only MTN and Orange Money (removed credit card)
   const paymentOptions = [
     { 
       id: 'mtn_mobile_money', 
@@ -37,12 +33,6 @@ export const PaymentMethod = ({ selectedMethod, onSelectMethod, total }) => {
       name: 'Orange Money', 
       description: t('orange_money_description', 'Pay securely using Orange Money'),
       icon: Smartphone
-    },
-    { 
-      id: 'credit_card', 
-      name: t('credit_card', 'Credit/Debit Card'), 
-      description: t('credit_card_description', 'Pay securely with your credit or debit card'),
-      icon: CreditCard
     }
   ];
   
@@ -105,96 +95,29 @@ export const PaymentMethod = ({ selectedMethod, onSelectMethod, total }) => {
               {/* Show payment form fields when this method is selected */}
               {selectedMethod === option.id && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
-                  {(option.id === 'mtn_mobile_money' || option.id === 'orange_money') && (
-                    <div className="space-y-3">
-                      <p className="text-sm text-gray-600 mb-2">
-                        {option.id === 'mtn_mobile_money' 
-                          ? t('enter_mtn_number', 'Enter your MTN Mobile Money number')
-                          : t('enter_orange_number', 'Enter your Orange Money number')}
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-600 mb-2">
+                      {option.id === 'mtn_mobile_money' 
+                        ? t('enter_mtn_number', 'Enter your MTN Mobile Money number')
+                        : t('enter_orange_number', 'Enter your Orange Money number')}
+                    </p>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {t('mobile_number', 'Mobile Number')} <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        type="tel"
+                        name="mobileNumber"
+                        placeholder="e.g., 6XXXXXXXX"
+                        value={paymentInfo.mobileNumber}
+                        onChange={handlePaymentInfoChange}
+                        className="w-full"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {t('mobile_number_hint', 'Enter your phone number without the country code')}
                       </p>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {t('mobile_number', 'Mobile Number')} <span className="text-red-500">*</span>
-                        </label>
-                        <Input
-                          type="tel"
-                          name="mobileNumber"
-                          placeholder="e.g., 6XXXXXXXX"
-                          value={paymentInfo.mobileNumber}
-                          onChange={handlePaymentInfoChange}
-                          className="w-full"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          {t('mobile_number_hint', 'Enter your phone number without the country code')}
-                        </p>
-                      </div>
                     </div>
-                  )}
-                  
-                  {option.id === 'credit_card' && (
-                    <div className="space-y-3">
-                      <p className="text-sm text-gray-600 mb-2">
-                        {t('enter_card_details', 'Enter your card details')}
-                      </p>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {t('card_number', 'Card Number')} <span className="text-red-500">*</span>
-                        </label>
-                        <Input
-                          type="text"
-                          name="cardNumber"
-                          placeholder="XXXX XXXX XXXX XXXX"
-                          value={paymentInfo.cardNumber}
-                          onChange={handlePaymentInfoChange}
-                          className="w-full"
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            {t('expiry_date', 'Expiry Date')} <span className="text-red-500">*</span>
-                          </label>
-                          <Input
-                            type="text"
-                            name="expiryDate"
-                            placeholder="MM/YY"
-                            value={paymentInfo.expiryDate}
-                            onChange={handlePaymentInfoChange}
-                            className="w-full"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            {t('cvv', 'CVV')} <span className="text-red-500">*</span>
-                          </label>
-                          <Input
-                            type="text"
-                            name="cvv"
-                            placeholder="XXX"
-                            value={paymentInfo.cvv}
-                            onChange={handlePaymentInfoChange}
-                            className="w-full"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {t('cardholder_name', 'Cardholder Name')} <span className="text-red-500">*</span>
-                        </label>
-                        <Input
-                          type="text"
-                          name="cardholderName"
-                          placeholder="NAME ON CARD"
-                          value={paymentInfo.cardholderName}
-                          onChange={handlePaymentInfoChange}
-                          className="w-full"
-                        />
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
               )}
             </div>
@@ -213,7 +136,6 @@ export const PaymentMethod = ({ selectedMethod, onSelectMethod, total }) => {
           <span className="font-semibold">
             {selectedMethod === 'mtn_mobile_money' && 'MTN Mobile Money'}
             {selectedMethod === 'orange_money' && 'Orange Money'}
-            {selectedMethod === 'credit_card' && t('credit_card', 'Credit/Debit Card')}
           </span>
         </div>
         <p className="text-xs text-gray-500 mt-2">

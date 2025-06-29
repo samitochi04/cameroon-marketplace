@@ -4,7 +4,8 @@ import { CartProvider } from "./context/CartContext";
 import { ToastProvider } from "./components/ui/Toaster";
 import { Suspense, lazy, useEffect } from "react";
 import { ensureStorageBuckets } from "./utils/storageHelpers";
-import { ToastContainer } from "./components/ui/Toast/ToastContainer";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Lazy loaded pages
 const ProductListPage = lazy(() =>
@@ -43,7 +44,18 @@ function App() {
             }
           >
             <AppRouter />
-            <ToastContainer />
+            <ToastContainer 
+              position="top-right"
+              autoClose={5000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="light"
+            />
           </Suspense>
         </ToastProvider>
       </CartProvider>
