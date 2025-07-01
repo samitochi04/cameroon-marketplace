@@ -271,7 +271,7 @@ const CustomerOrderDetail = () => {
         <Card className="p-4">
           <div className="flex items-center">
             <div className="w-5 h-5 text-gray-500 mr-3 flex items-center justify-center">
-              XAF
+              FCFA
             </div>
             <div>
               <p className="text-sm text-gray-500">{t('orders.total')}</p>
@@ -353,12 +353,12 @@ const CustomerOrderDetail = () => {
         <Card className="p-6">
           <div className="flex items-center mb-4">
             <CreditCard className="w-5 h-5 text-gray-500 mr-2" />
-            <h3 className="font-semibold">{t('payment_information')}</h3>
+            <h3 className="font-semibold">{t('orders.payment_information')}</h3>
           </div>
           
           <div className="text-sm space-y-2">
             <div className="flex justify-between">
-              <span className="text-gray-500">{t('payment_method')}:</span>
+              <span className="text-gray-500">{t('orders.payment_method')}:</span>
               <span className="font-medium">
                 {order.payment_method === 'simulated_payment' ? 'Simulated Payment (Dev)' :
                  order.payment_method === 'mtn_mobile_money' ? 'MTN Mobile Money' :
@@ -368,7 +368,7 @@ const CustomerOrderDetail = () => {
             </div>
             
             <div className="flex justify-between">
-              <span className="text-gray-500">{t('payment_status')}:</span>
+              <span className="text-gray-500">{t('orders.payment_status')}:</span>
               <Badge variant={order.payment_status === 'completed' ? 'success' : 'warning'}>
                 {getPaymentStatusText(order.payment_status)}
               </Badge>
@@ -379,7 +379,7 @@ const CustomerOrderDetail = () => {
 
       {/* Order Summary */}
       <Card className="p-6">
-        <h3 className="font-semibold mb-4">{t('order_summary')}</h3>
+        <h3 className="font-semibold mb-4">{t('common.order_summary')}</h3>
         
         <div className="space-y-2">
           <div className="flex justify-between text-sm">

@@ -63,7 +63,7 @@ const AboutPage = () => {
           <section>
             <h2 className="text-2xl font-semibold mb-4">{t("company.our_team_title")}</h2>
             <p className="mb-6">{t("company.our_team_text")}</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {/* <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
               <div className="text-center">
                 <div className="w-32 h-32 bg-gray-200 rounded-full mx-auto mb-4"></div>
                 <h4 className="font-semibold">Jean Pierre Foe</h4>
@@ -79,7 +79,7 @@ const AboutPage = () => {
                 <h4 className="font-semibold">Paul Eteki</h4>
                 <p className="text-gray-600">{t("company.cmo")}</p>
               </div>
-            </div>
+            </div> */}
           </section>
         </div>
       </div>

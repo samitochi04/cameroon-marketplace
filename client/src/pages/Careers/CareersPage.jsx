@@ -4,40 +4,7 @@ import { useTranslation } from 'react-i18next';
 const CareersPage = () => {
   const { t } = useTranslation();
 
-  const jobOpenings = [
-    {
-      id: 1,
-      title: t("careers.software_developer"),
-      department: t("careers.tech_department"),
-      location: t("careers.location_yaounde"),
-      type: t("careers.full_time"),
-      description: t("careers.software_developer_desc"),
-    },
-    {
-      id: 2,
-      title: t("careers.marketing_specialist"),
-      department: t("careers.marketing_department"),
-      location: t("careers.location_douala"),
-      type: t("careers.full_time"),
-      description: t("careers.marketing_specialist_desc"),
-    },
-    {
-      id: 3,
-      title: t("careers.customer_service"),
-      department: t("careers.support_department"),
-      location: t("careers.location_yaounde"),
-      type: t("careers.part_time"),
-      description: t("careers.customer_service_desc"),
-    },
-    {
-      id: 4,
-      title: t("careers.logistics_coordinator"),
-      department: t("careers.operations_department"),
-      location: t("careers.location_douala"),
-      type: t("careers.full_time"),
-      description: t("careers.logistics_coordinator_desc"),
-    },
-  ];
+  const jobOpenings = [];
 
   const benefits = [
     {
@@ -124,49 +91,6 @@ const CareersPage = () => {
                 <p className="text-gray-600">{job.description}</p>
               </div>
             ))}
-          </div>
-        </section>
-        
-        {/* Application Process */}
-        <section className="mb-16">
-          <h2 className="text-2xl font-bold mb-8 text-center">{t("careers.application_process")}</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="flex flex-col items-center text-center bg-white p-6 rounded-lg shadow-md">
-              <div className="w-12 h-12 bg-primary/20 text-primary rounded-full flex items-center justify-center mb-4">
-                <span className="text-lg font-semibold">1</span>
-              </div>
-              <h3 className="font-semibold text-lg mb-2">{t("careers.apply_online")}</h3>
-              <p className="text-gray-600">{t("careers.apply_online_desc")}</p>
-            </div>
-            
-            <div className="flex flex-col items-center text-center bg-white p-6 rounded-lg shadow-md">
-              <div className="w-12 h-12 bg-primary/20 text-primary rounded-full flex items-center justify-center mb-4">
-                <span className="text-lg font-semibold">2</span>
-              </div>
-              <h3 className="font-semibold text-lg mb-2">{t("careers.interview")}</h3>
-              <p className="text-gray-600">{t("careers.interview_desc")}</p>
-            </div>
-            
-            <div className="flex flex-col items-center text-center bg-white p-6 rounded-lg shadow-md">
-              <div className="w-12 h-12 bg-primary/20 text-primary rounded-full flex items-center justify-center mb-4">
-                <span className="text-lg font-semibold">3</span>
-              </div>
-              <h3 className="font-semibold text-lg mb-2">{t("careers.welcome_aboard")}</h3>
-              <p className="text-gray-600">{t("careers.welcome_aboard_desc")}</p>
-            </div>
-          </div>
-        </section>
-        
-        {/* Contact */}
-        <section className="bg-white p-8 rounded-lg shadow-md">
-          <h2 className="text-2xl font-bold mb-4 text-center">{t("careers.questions")}</h2>
-          <p className="text-center text-gray-600 mb-6">{t("careers.questions_desc")}</p>
-          
-          <div className="text-center">
-            <a href="mailto:careers@cameroon-marketplace.com" className="inline-block bg-primary hover:bg-primary-dark text-white py-3 px-6 rounded-lg transition">
-              {t("careers.contact_hr")}
-            </a>
           </div>
         </section>
       </div>

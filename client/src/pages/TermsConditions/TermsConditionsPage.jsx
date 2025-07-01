@@ -12,13 +12,13 @@ const TermsConditionsPage = () => {
       <div className="prose prose-lg max-w-none">
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">1. Introduction</h2>
-          <p>Bienvenue sur Cameroon Marketplace. Les présentes Conditions Générales d'Utilisation régissent votre utilisation de notre site web et de tous les services associés. En accédant à notre plateforme, vous acceptez d'être lié par ces conditions. Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser notre site.</p>
+          <p>Bienvenue sur AXIS Shop. Les présentes Conditions Générales d'Utilisation régissent votre utilisation de notre site web et de tous les services associés. En accédant à notre plateforme, vous acceptez d'être lié par ces conditions. Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser notre site.</p>
         </section>
 
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">2. Définitions</h2>
           <ul className="list-disc pl-6 space-y-2">
-            <li>"Plateforme" désigne le site web Cameroon Marketplace.</li>
+            <li>"Plateforme" désigne le site web AXIS Shop.</li>
             <li>"Utilisateur" désigne toute personne qui accède à la Plateforme.</li>
             <li>"Client" désigne un Utilisateur qui achète des produits sur la Plateforme.</li>
             <li>"Vendeur" désigne un Utilisateur qui vend des produits sur la Plateforme.</li>
@@ -102,7 +102,7 @@ const TermsConditionsPage = () => {
 
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">12. Contact</h2>
-          <p>Si vous avez des questions concernant ces Conditions Générales d'Utilisation, veuillez nous contacter à l'adresse suivante : contact@cameroon-marketplace.com</p>
+          <p>Si vous avez des questions concernant ces Conditions Générales d'Utilisation, veuillez nous contacter à l'adresse suivante : axis.company.org@gmail.com</p>
         </section>
 
         <p className="mt-8 text-sm text-gray-600">Dernière mise à jour : 28 juin 2025</p>

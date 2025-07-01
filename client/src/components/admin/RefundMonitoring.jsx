@@ -265,7 +265,7 @@ export const AdminRefundMonitoring = ({ className = '' }) => {
                         : 'bg-red-100 text-red-800'
                     }`}>
                       Commande {result.orderId}: {result.success ? 
-                        `Remboursé ${result.refundAmount} XAF` : 
+                        `Remboursé ${result.refundAmount} FCFA` : 
                         `Erreur: ${result.error}`
                       }
                     </div>
